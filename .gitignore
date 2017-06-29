@@ -67,6 +67,8 @@ ramdisk_fix_permissions.sh
 update_random.sh
 ramdisk/SM-G920F/boot.img
 ramdisk/SM-G920F/split_img/boot.img-zImage
+security/selinux/av_permissions.h
+security/selinux/flask.h
 arch/arm64/boot/boot.img-dtb
 arch/arm64/boot/dtb/
 extra_certificates
