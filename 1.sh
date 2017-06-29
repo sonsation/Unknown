@@ -126,8 +126,8 @@ FUNC_BUILD_RAMDISK()
 	zeroflte)
 		rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-zImage
 		mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/SM-G920F/split_img/boot.img-zImage
-                #rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
-		#mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
+                rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
+		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
 		cd $RDIR/ramdisk/SM-G920F
 		./repackimg.sh
 		echo SEANDROIDENFORCE >> boot.img
@@ -153,7 +153,6 @@ rm -rf ./build.log
 (
     START_TIME=`date +%s`
 
-        FUNC_CLEAN_DTB
 	FUNC_BUILD_KERNEL
 	FUNC_BUILD_RAMDISK
 
