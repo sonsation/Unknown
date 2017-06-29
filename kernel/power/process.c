@@ -116,23 +116,26 @@ static int try_to_freeze_tasks(bool user_only)
 	return todo ? -EBUSY : 0;
 }
 
+static bool __check_frozen_processes(void)
+{
+	struct task_struct *g, *p;
+
+	for_each_process_thread(g, p)
+		if (p != current && !freezer_should_skip(p) && !frozen(p))
+			return false;
+
+	return true;
+}
+
 /*
  * Returns true if all freezable tasks (except for current) are frozen already
  */
 static bool check_frozen_processes(void)
 {
-	struct task_struct *g, *p;
-	bool ret = true;
+	bool ret;
 
 	read_lock(&tasklist_lock);
-	for_each_process_thread(g, p) {
-		if (p != current && !freezer_should_skip(p) &&
-		    !frozen(p)) {
-			ret = false;
-			goto done;
-		}
-	}
-done:
+	ret = __check_frozen_processes();
 	read_unlock(&tasklist_lock);
 
 	return ret;
@@ -155,6 +158,7 @@ int freeze_processes(void)
 	if (!pm_freezing)
 		atomic_inc(&system_freezing_cnt);
 
+        pm_wakeup_clear();
 	printk("Freezing user space processes ... ");
 	pm_freezing = true;
 	oom_kills_saved = oom_kills_count();
@@ -173,11 +177,11 @@ int freeze_processes(void)
 			__usermodehelper_set_disable_depth(UMH_ENABLED);
 			printk("OOM in progress.");
 			error = -EBUSY;
-			goto done;
+		} else {
+			printk("done.");
 		}
-		printk("done.");
 	}
-done:
+
 	printk("\n");
 	BUG_ON(in_atomic());
 
