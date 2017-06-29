@@ -69,8 +69,8 @@
 #endif
 
 #ifdef CONFIG_SOC_EXYNOS7420
-#define CL0_MAX_VOLT		1175000
-#define CL1_MAX_VOLT		1125000
+#define CL0_MAX_VOLT		1300000
+#define CL1_MAX_VOLT		1300000
 #define CL0_MIN_VOLT		500000
 #define CL1_MIN_VOLT		500000
 #define CL_MAX_VOLT(cl)		(cl == CL_ZERO ? CL0_MAX_VOLT : CL1_MAX_VOLT)
@@ -82,9 +82,9 @@
 
 #ifdef CONFIG_SOC_EXYNOS7420
 #define CL0_MIN_FREQ		400000
-#define CL0_MAX_FREQ		1500000
+#define CL0_MAX_FREQ		1704000
 #define CL1_MIN_FREQ		800000
-#define CL1_MAX_FREQ		2100000
+#define CL1_MAX_FREQ		2304000
 #else
 #error "Please define core frequency ranges for current SoC."
 #endif
