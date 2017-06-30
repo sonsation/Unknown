@@ -1033,13 +1033,12 @@ static int cpufreq_interactive_speedchange_task(void *data)
 
 			if (max_freq != pcpu->policy->cur)
                         tunables = pcpu->policy->governor_data;
-				if (tunables->powersave_bias || suspended)
-				__cpufreq_driver_target(pcpu->policy,
+				if (tunables->powersave_bias)
+					__cpufreq_driver_target(pcpu->policy,
 							max_freq,
 							CPUFREQ_RELATION_C);
 				else
-				if (tunables->powersave_bias || !suspended) 
-				__cpufreq_driver_target(pcpu->policy,
+					__cpufreq_driver_target(pcpu->policy,
 							max_freq,
 							CPUFREQ_RELATION_H);
 
