@@ -26,7 +26,7 @@
 #elif defined(CONFIG_MIPS)
 #  define INPUT_COMPAT_TEST test_thread_flag(TIF_32BIT_ADDR)
 #else
-#  define INPUT_COMPAT_TEST ttest_thread_flag(TIF_32BIT)
+#  define INPUT_COMPAT_TEST test_thread_flag(TIF_32BIT)
 #endif
 
 struct input_event_compat {
