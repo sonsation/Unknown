@@ -227,6 +227,9 @@ struct cpufreq_interactive_tunables {
 
 	unsigned int sampling_down_factor;
 #endif
+
+        /* Improves frequency selection for more energy */
+	bool powersave_bias;
 };
 
 /* For cases where we have single governor instance for system */
@@ -979,6 +982,7 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	cpumask_t policy_mask;
 	unsigned long flags;
 	struct cpufreq_interactive_cpuinfo *pcpu;
+        struct cpufreq_interactive_tunables *tunables;
 
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -1028,6 +1032,13 @@ static int cpufreq_interactive_speedchange_task(void *data)
 			}
 
 			if (max_freq != pcpu->policy->cur)
+                        tunables = pcpu->policy->governor_data;
+				if (tunables->powersave_bias || suspended)
+				__cpufreq_driver_target(pcpu->policy,
+							max_freq,
+							CPUFREQ_RELATION_C);
+				else
+				if (tunables->powersave_bias || !suspended) 
 				__cpufreq_driver_target(pcpu->policy,
 							max_freq,
 							CPUFREQ_RELATION_H);
@@ -1868,6 +1879,26 @@ static ssize_t show_region_time_in_state(struct cpufreq_interactive_tunables *tu
 	return len;
 }
 #endif
+
+static ssize_t show_powersave_bias(struct cpufreq_interactive_tunables *tunables,
+		char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->powersave_bias);
+}
+
+static ssize_t store_powersave_bias(struct cpufreq_interactive_tunables *tunables,
+		const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->powersave_bias = val;
+	return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1915,6 +1946,7 @@ show_store_gov_pol_sys(boost);
 store_gov_pol_sys(boostpulse);
 show_store_gov_pol_sys(boostpulse_duration);
 show_store_gov_pol_sys(io_is_busy);
+show_store_gov_pol_sys(powersave_bias);
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
 show_store_gov_pol_sys(mode);
@@ -1957,6 +1989,7 @@ gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
 gov_sys_pol_attr_rw(io_is_busy);
+gov_sys_pol_attr_rw(powersave_bias);
 #ifdef CONFIG_MODE_AUTO_CHANGE
 gov_sys_pol_attr_rw(mode);
 gov_sys_pol_attr_rw(enforced_mode);
@@ -2006,6 +2039,7 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&boostpulse_gov_sys.attr,
 	&boostpulse_duration_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
+        &powersave_bias_gov_sys.attr,
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	&mode_gov_sys.attr,
 	&enforced_mode_gov_sys.attr,
@@ -2046,6 +2080,7 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&boostpulse_gov_pol.attr,
 	&boostpulse_duration_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
+        &powersave_bias_gov_pol.attr,
 #ifdef CONFIG_MODE_AUTO_CHANGE
 	&mode_gov_pol.attr,
 	&enforced_mode_gov_pol.attr,
