@@ -15,6 +15,58 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Samsung Galaxy S6 G92X EXYNOS 7420
+ *   apollo cluster (little core)
+ * 	{L0,  2000 * 1000},
+ *	{L1,  1900 * 1000},
+ *	{L2,  1800 * 1000},
+ *	{L3,  1704 * 1000},
+ *	{L4,  1600 * 1000},
+ *	{L5,  1500 * 1000},
+ *	{L6,  1400 * 1000},
+ *	{L7,  1296 * 1000},
+ *	{L8,  1200 * 1000},
+ *	{L9,  1104 * 1000},
+ *	{L10, 1000 * 1000},
+ *	{L11,  900 * 1000},
+ *	{L12,  800 * 1000},
+ *	{L13,  700 * 1000},
+ *	{L14,  600 * 1000},
+ *	{L15,  500 * 1000},
+ *	{L16,  400 * 1000},
+ *	{L17,  300 * 1000},
+ *	{L18,  200 * 1000},
+ *
+ *   atlas cluster (big core)
+ *	{L0,  2496 * 1000},
+ *	{L1,  2400 * 1000},
+ *	{L2,  2304 * 1000},
+ *	{L3,  2200 * 1000},
+ *	{L4,  2100 * 1000},
+ *	{L5,  2000 * 1000},
+ *	{L6,  1896 * 1000},
+ *	{L7,  1800 * 1000},
+ *	{L8,  1704 * 1000},
+ *	{L9,  1600 * 1000},
+ *	{L10, 1500 * 1000},
+ *	{L11, 1400 * 1000},
+ *	{L12, 1300 * 1000},
+ *	{L13, 1200 * 1000},
+ *	{L14, 1100 * 1000},
+ *	{L15, 1000 * 1000},
+ *	{L16,  900 * 1000},
+ *	{L17,  800 * 1000},
+ *	{L18,  700 * 1000},
+ *	{L19,  600 * 1000},
+ *	{L20,  500 * 1000},
+ *	{L21,  400 * 1000},
+ *	{L22,  300 * 1000},
+ *	{L23,  200 * 1000},
+ *
+ */
+
+
 #include <mach/cpufreq.h>
 
 #ifdef CONFIG_EXYNOS7420_UNDERCLOCK
@@ -41,7 +93,7 @@
 	 *     - +0.20V (+0.05V per level) compared to default voltage on cluster1
 	 */
 
-    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L3 // 1704 MHz
+    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L4 // 1600 MHz
     #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L3 // 2200 MHz
 
 #else
@@ -49,4 +101,25 @@
     #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L5 // 1500 MHz
     #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L4 // 2100 MHz
 
+#endif
+
+#ifdef CONFIG_SOC_EXYNOS7420
+#define CL0_MIN_FREQ		400000
+#define CL0_MAX_FREQ		1600000
+#define CL1_MIN_FREQ		800000
+#define CL1_MAX_FREQ		2200000
+#else
+#error "Please define core frequency ranges for current SoC."
+#endif
+
+#ifdef CONFIG_SOC_EXYNOS7420
+#define CL0_MAX_VOLT		1175000
+#define CL1_MAX_VOLT		1125000
+#define CL0_MIN_VOLT		500000
+#define CL1_MIN_VOLT		500000
+#define CL_MAX_VOLT(cl)		(cl == CL_ZERO ? CL0_MAX_VOLT : CL1_MAX_VOLT)
+#define CL_MIN_VOLT(cl)		(cl == CL_ZERO ? CL0_MIN_VOLT : CL1_MIN_VOLT)
+#define CL_VOLT_STEP		6250
+#else
+#error "Please define core voltage ranges for current SoC."
 #endif

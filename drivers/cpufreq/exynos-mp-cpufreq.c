@@ -32,6 +32,7 @@
 #include <linux/sysfs.h>
 #include <linux/cpumask.h>
 #include <linux/exynos-ss.h>
+#include <linux/cpuclocker.h>
 
 #if defined(CONFIG_SEC_PM) && defined(CONFIG_MUIC_NOTIFIER)
 #include <linux/muic/muic.h>
@@ -66,27 +67,6 @@
 #else
 #define POWER_COEFF_15P		48 /* percore param */
 #define POWER_COEFF_7P		9 /* percore  param */
-#endif
-
-#ifdef CONFIG_SOC_EXYNOS7420
-#define CL0_MAX_VOLT		1175000
-#define CL1_MAX_VOLT		1175000
-#define CL0_MIN_VOLT		500000
-#define CL1_MIN_VOLT		500000
-#define CL_MAX_VOLT(cl)		(cl == CL_ZERO ? CL0_MAX_VOLT : CL1_MAX_VOLT)
-#define CL_MIN_VOLT(cl)		(cl == CL_ZERO ? CL0_MIN_VOLT : CL1_MIN_VOLT)
-#define CL_VOLT_STEP		6250
-#else
-#error "Please define core voltage ranges for current SoC."
-#endif
-
-#ifdef CONFIG_SOC_EXYNOS7420
-#define CL0_MIN_FREQ		400000
-#define CL0_MAX_FREQ		1704000
-#define CL1_MIN_FREQ		800000
-#define CL1_MAX_FREQ		2200000
-#else
-#error "Please define core frequency ranges for current SoC."
 #endif
 
 #define VOLT_RANGE_STEP		25000
