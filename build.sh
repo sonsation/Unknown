@@ -1,9 +1,8 @@
 #!/bin/bash
-# kernel build script by Tkkg1994 v0.6 (optimized from apq8084 kernel source)
+# kernel build script by Tkkg1994(optimized from apq8084 kernel source)
 
-export MODEL=zeroflte
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/media/jh/12383f82-a79b-47ba-aac9-d9d05d0fc0fe/toolchain/gcc-linaro/bin/aarch64-linux-gnu-
+export BUILD_CROSS_COMPILE=/media/jh/12383f82-a79b-47ba-aac9-d9d05d0fc0fe/toolchain/gcc-7.x/bin/aarch64-gnu-linux-gnueabi-
 export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
 
 RDIR=$(pwd)
@@ -16,29 +15,15 @@ INCDIR=$RDIR/include
 PAGE_SIZE=2048
 DTB_PADDING=0
 
-if [ $MODEL = zeroflte ]
-then
-	KERNEL_DEFCONFIG=ext4-zeroflte_defconfig
-else if [ $MODEL = zerolte ]
-then
-	KERNEL_DEFCONFIG=ext4-zeroflte_defconfig
+VERSION=1.0.3
+ZIP_NAME=UnknownKernel_SM-G920XX_v$VERSION.zip
+ZIP_FILE_DIR=$RDIR/output
 
-fi
-fi
-
-FUNC_CLEAN_DTB()
+FUNC_CLEAN_FILE()
 {
-        ##build cache clear
-        find . -type f -name "*~" -exec rm -f {} \;
-        find . -type f -name "*orig" -exec rm -f {} \;
-        find . -type f -name "*rej" -exec rm -f {} \;
-        ccache -C
-        xterm -e make clean
-        xterm -e make mrproper 
-
-                 
+                
 	if ! [ -d $RDIR/arch/$ARCH/boot/dts ] ; then
-		echo "no directory : "$RDIR/arch/$ARCH/boot/dts""
+		echo "No directory"
 	else
 		echo "rm files in : "$RDIR/arch/$ARCH/boot/dts/*.dtb""
 		rm $RDIR/arch/$ARCH/boot/dts/*.dtb
@@ -46,6 +31,26 @@ FUNC_CLEAN_DTB()
 		rm $RDIR/arch/$ARCH/boot/boot.img-dtb
 		rm $RDIR/arch/$ARCH/boot/boot.img-zImage
 	fi
+
+        if ! [ -d $RDIR/build/boot ] ; then
+		echo "No directory"
+	else
+		echo "rm files in : "$RDIR/build/boot/$MODEL.img""
+		rm $RDIR/build/boot/*.img
+	fi
+}
+
+FUNC_CLEAN()
+{
+
+        ##build cache clear
+        find . -type f -name "*~" -exec rm -f {} \;
+        find . -type f -name "*orig" -exec rm -f {} \;
+        find . -type f -name "*rej" -exec rm -f {} \;
+        ccache -C
+        xterm -e make clean
+        xterm -e make mrproper   
+
 }
 
 FUNC_BUILD_DTIMAGE_TARGET()
@@ -60,7 +65,7 @@ FUNC_BUILD_DTIMAGE_TARGET()
 		DTSFILES="exynos7420-zeroflte_kor_06"
 		;;
 	zerolte)
-		DTSFILES="exynos7420-zerolte_kor_06"
+		DTSFILES="exynos7420-zerolte_eur_open_06"
 		;;
 	*)
 		echo "Unknown device: $MODEL"
@@ -78,7 +83,9 @@ FUNC_BUILD_DTIMAGE_TARGET()
 
 	rm -f ./*
 
-	echo "Processing dts files..."
+	echo ""
+        echo "Processing dts files"
+        echo "" 
 
 		for dts in $DTSFILES; do
 		echo "=> Processing: ${dts}.dts"
@@ -88,38 +95,30 @@ FUNC_BUILD_DTIMAGE_TARGET()
 	done
 
 	echo "Generating dtb.img..."
-	$RDIR/scripts/dtbTool/dtbTool -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE
+        $RDIR/scripts/dtbTool/dtbTool -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE
 
 	echo "Done."
 }
 
 FUNC_BUILD_KERNEL()
 {
-	echo ""
-        echo "=============================================="
-        echo "START : FUNC_BUILD_KERNEL"
-        echo "=============================================="
+        echo "Loading configuration..."
         echo ""
-        echo "build common config="$KERNEL_DEFCONFIG ""
-        echo "build variant config="$MODEL ""
 
-	FUNC_CLEAN_DTB
+	FUNC_CLEAN_FILE
 
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 			$KERNEL_DEFCONFIG || exit -1
 
+        echo ""
+        echo "Compiling Kernel..."
+        echo "" 
+
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE || exit -1
-
-	FUNC_BUILD_DTIMAGE_TARGET
 	
 	echo ""
-	echo "================================="
-	echo "END   : FUNC_BUILD_KERNEL"
-	echo "================================="
-	echo ""
-
 
 }
 
@@ -134,20 +133,20 @@ FUNC_BUILD_RAMDISK()
 	zeroflte)
 		rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-zImage
 		mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/SM-G920F/split_img/boot.img-zImage
-                #rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
-		#mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
+                rm -f $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
+		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
 		cd $RDIR/ramdisk/SM-G920F
 		./repackimg.sh
-		echo SEANDROIDENFORCE >> boot.img
+		echo SEANDROIDENFORCE >> image-new.img
 		;;
 	zerolte)
 		rm -f $RDIR/ramdisk/SM-G925F/split_img/boot.img-zImage
 		mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/SM-G925F/split_img/boot.img-zImage
                 rm -f $RDIR/ramdisk/SM-G925F/split_img/boot.img-dtb
-		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G920F/split_img/boot.img-dtb
+		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-G925F/split_img/boot.img-dtb 
 		cd $RDIR/ramdisk/SM-G925F
 		./repackimg.sh
-		echo SEANDROIDENFORCE >> boots6e.img
+		echo SEANDROIDENFORCE >> image-new.img
 		;;
 	*)
 		echo "Unknown device: $MODEL"
@@ -156,17 +155,113 @@ FUNC_BUILD_RAMDISK()
 	esac
 }
 
-# MAIN FUNCTION
-rm -rf ./build.log
-(
-    START_TIME=`date +%s`
+FUNC_BUILD_ZIP()
+{
 
-        FUNC_CLEAN_DTB
-	FUNC_BUILD_KERNEL
-	FUNC_BUILD_RAMDISK
+	case $MODEL in
 
-    END_TIME=`date +%s`
+	zeroflte)
+
+		mv -f $RDIR/ramdisk/SM-G920F/image-new.img $RDIR/build/boot/$MODEL.img
+		;;
+
+	zerolte)
+
+		mv -f $RDIR/ramdisk/SM-G925F/image-new.img $RDIR/build/boot/$MODEL.img
+		;;
 	
-    let "ELAPSED_TIME=$END_TIME-$START_TIME"
-    echo "Total compile time is $ELAPSED_TIME seconds"
-)
+	*)
+		echo "Unknown device: $MODEL"
+		exit 1
+		;;
+	esac
+
+        echo ""
+        echo "Building Zip File"
+
+        cd $RDIR/build
+        zip -r BUILD *
+        mv -f $RDIR/build/BUILD.zip $ZIP_FILE_DIR/$ZIP_NAME
+
+}
+
+FUNC_MAIN()
+{
+	FUNC_BUILD_KERNEL
+        FUNC_BUILD_DTIMAGE_TARGET
+	FUNC_BUILD_RAMDISK
+        FUNC_BUILD_ZIP 	
+}
+
+OPTION_1()
+{
+MODEL=zeroflte
+KERNEL_DEFCONFIG=exynos7420-zeroflte_defconfig
+(
+  FUNC_MAIN
+) 
+
+echo ""
+echo "####################FINSH########################"
+echo "You can now find your Kernel in the Output folder"
+echo ""
+echo ""
+exit
+}
+
+OPTION_2()
+{
+MODEL=zerolte
+KERNEL_DEFCONFIG=exynos7420-zerolte_defconfig
+(
+  FUNC_MAIN
+) 
+
+echo ""
+echo "####################FINSH########################"
+echo "You can now find your Kernel in the Output folder"
+echo ""
+exit
+}
+
+OPTION_0()
+{
+FUNC_CLEAN
+exit
+}
+
+# -------------
+# MAIN START
+# -------------
+clear
+echo "UnknownKernel Build Script"
+echo "Kernel Version: v$VERSION"
+echo " 0) Clean Workspace"
+echo " 1) Build UnknownKernel for S6(F/K/S/L)"
+echo " 2) Build UnknownKernel for S6 Edge(F/K/S/L)"
+echo " 3) Exit"
+echo ""
+read -p "Please select an option " select
+echo ""
+
+   case $select in
+
+	0)
+		OPTION_0
+		;;
+
+	1)
+		OPTION_1
+		;;
+	2)
+		OPTION_2
+		;;
+	3)
+		OPTION_3
+		;;
+	
+	*)
+		exit 1
+		;;
+	esac
+
