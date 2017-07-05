@@ -177,7 +177,7 @@
 #define unreachable() __builtin_unreachable()
 
 /* Mark a function definition as prohibited from being cloned. */
-#define __noclone	__attribute__((__noclone__, __optimize__("no-tracer")))
+#define __noclone	__attribute__((__noclone__))
 
 #endif /* GCC_VERSION >= 40500 */
 
@@ -221,4 +221,4 @@
  */
 #define uninitialized_var(x) x = x
 
-#define __always_inline		inline __attribute__((always_inline))
+#define __always_inline	inline __attribute__((always_inline))
