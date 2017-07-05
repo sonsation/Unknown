@@ -2,7 +2,7 @@
 # kernel build script by Tkkg1994(optimized from apq8084 kernel source)
 
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/media/jh/12383f82-a79b-47ba-aac9-d9d05d0fc0fe/toolchain/gcc-7.x/bin/aarch64-gnu-linux-gnueabi-
+export BUILD_CROSS_COMPILE=/media/jh/12383f82-a79b-47ba-aac9-d9d05d0fc0fe/toolchain/gcc-7.1.1/bin/aarch64-gnu-linux-gnu-
 export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
 
 RDIR=$(pwd)
