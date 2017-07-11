@@ -41,22 +41,20 @@ extern int s2m_get_dvs_is_on(void);
 #endif
 #endif
 
-#define CPU_MAX PM_QOS_CLUSTER1_FREQ_MAX_DEFAULT_VALUE
-
 #ifdef CONFIG_EXYNOS_NOC_DEBUGGING
 void __iomem *g3d0_outstanding_regs;
 void __iomem *g3d1_outstanding_regs;
 #endif /* CONFIG_EXYNOS_NOC_DEBUGGING */
 
-/*  clk,vol,abb,min,max,down stay, pm_qos mem, pm_qos int, pm_qos cpu_kfc_min, pm_qos cpu_egl_max */
+/*  clock, voltage, asv_abb, min_threshold, max_threshold, down_staycount, time, mem_freq, int_freq, cpu_freq (cl0) */
 static gpu_dvfs_info gpu_dvfs_table_default[] = {
-	{772, 900000, 0, 98, 100, 1, 0, 1552000, 400000, 1400000, 0 },
-	{700, 900000, 0, 98,  99, 1, 0, 1552000, 400000, 1200000, 0 },
-	{600, 900000, 0, 78,  85, 1, 0, 1552000, 413000, 1000000, 0 },
-	{544, 900000, 0, 78,  85, 1, 0, 1026000, 413000,  800000, 0 },
-	{420, 900000, 0, 78,  85, 1, 0, 1026000, 267000,  600000, 0 },
-	{350, 900000, 0, 78,  85, 1, 0,  543000, 200000,       0, 0 },
-	{266, 900000, 0, 78,  85, 1, 0,  416000, 160000,       0, 0 },
+	{ 772, 900000, 0, 98, 100, 1, 0, 1552000, 400000, 1600000 },
+	{ 700, 900000, 0, 98,  99, 1, 0, 1552000, 400000, 1296000 },
+	{ 600, 900000, 0, 78,  85, 1, 0, 1552000, 413000, 1000000 },
+	{ 544, 900000, 0, 78,  85, 1, 0, 1026000, 413000,  800000 },
+	{ 420, 900000, 0, 78,  85, 1, 0, 1026000, 267000,  600000 },
+	{ 350, 900000, 0, 78,  85, 1, 0,  543000, 200000,       0 },
+	{ 266, 900000, 0, 78,  85, 1, 0,  416000, 160000,       0 },
 };
 
 static int mif_min_table[] = {
