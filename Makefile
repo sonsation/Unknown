@@ -384,9 +384,8 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -w -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration -fno-pic \
-		   -Wno-format-security \
+		   -Wno-format-security -Wno-logical-not-parentheses \
 		   -fno-delete-null-pointer-checks \
-		   -fdiagnostics-show-option -Werror \
 		   -march=armv8-a+crc \
 		   -mtune=cortex-a57.cortex-a53 \
                    -std=gnu89 \
