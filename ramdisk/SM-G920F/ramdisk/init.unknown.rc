@@ -1,0 +1,110 @@
+# Copyright (C) 2012 The Android Open Source Project
+#
+# IMPORTANT: Do not create world writable files or directories.
+# This is a common source of Android security bugs.
+#
+
+on early-init
+    write /sys/block/sda/queue/scheduler row
+    write /sys/block/sda/queue/read_ahead_kb 2048
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
+
+on property:sys.boot_completed=1
+
+    # Allow system to modify cpufreq control files
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu5/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu5/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
+    chmod 0666 /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
+
+    # Assume SMP uses shared cpufreq policy for all CPUs
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu5/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu5/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu5/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu5/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu6/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu6/cpufreq/scaling_min_freq
+    chown root system /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq
+    chmod 0666 /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq
+    chmod 0666 /sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq
+
+    # Min freq values
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 400000
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq 400000
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq 400000
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq 400000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 800000
+    write /sys/devices/system/cpu/cpu5/cpufreq/scaling_min_freq 800000
+    write /sys/devices/system/cpu/cpu6/cpufreq/scaling_min_freq 800000
+    write /sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq 800000
+
+    # Max freq values
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu5/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq 2200000
+
+    # Set TCP
+    write /proc/sys/net/ipv4/tcp_congestion_control westwood
+
+    # Set GPU values
+    write /sys/devices/platform/gpusysfs/gpu_max_clock 700
+
+    # I/O management
+    write /sys/block/sda/queue/rotational 0
+    write /sys/block/sda/queue/rq_affinity 2
+    write /sys/block/sda/queue/add_random 0
+    write /sys/block/sda/queue/read_ahead_kb 128
+    write /sys/block/sda/bdi/min_ratio 5
+
+    # Disable Wakelocks
+    write /sys/module/wakeup/parameters/enable_sensorhub_wl 0
+    write /sys/module/wakeup/parameters/enable_ssp_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_rx_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_ctrl_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_bluedroid_timer_wl 0
+
+    # Misc
+    write /sys/kernel/sched/gentle_fair_sleepers 0
+    write /sys/module/sync/parameters/fsync_enabled 0

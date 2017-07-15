@@ -1,0 +1,27 @@
+#!/system/bin/sh
+
+cat << CTAG
+
+{
+    sections: [
+                `. /res/synapse/json.gen.myabout`
+                `. /res/synapse/json.gen.big`
+		`. /res/synapse/json.gen.little`
+		`. /res/synapse/json.gen.governor`
+		`. /res/synapse/json.gen.spectrum`
+                `. /res/synapse/json.gen.io`
+		`. /res/synapse/json.gen.saving`
+		`. /res/synapse/json.gen.led`
+		`. /res/synapse/json.gen.network`
+		`. /res/synapse/json.gen.bus`
+		`. /res/synapse/json.gen.thermal`
+		`. /res/synapse/json.gen.gpu`
+		`. /res/synapse/json.gen.doze`
+		`. /res/synapse/json.gen.wakelock`
+		`. /res/synapse/json.gen.bprop`
+		`. /res/synapse/json.gen.misc`
+		`. /res/synapse/json.gen.backup-restore`
+    ]
+}
+CTAG
+

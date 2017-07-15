@@ -1,0 +1,87 @@
+#!/system/bin/sh
+
+if [ ! -f /su/xbin/busybox ]; then
+	BB=/system/xbin/busybox;
+else
+	BB=/su/xbin/busybox;
+fi;
+
+cat << CTAG
+{
+    name:Misc,
+    elements:[
+	{ SPane:{
+		title:"Xbox controller",
+		description:"Enable or disable Xbox controller support"
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"XPAD",
+		default:$(echo "$(/res/synapse/actions/modules xpad)"),
+		action:"modules xpad",
+		values:[Disabled, Enabled,]
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SPane:{
+		title:"Fsync"
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Fsync",
+		description:"This can reduce I/O pressure, but also cause instabilities like crashes. When these occur, enable Fsync again..\n",
+		default:Y,
+		action:"generic /sys/module/sync/parameters/fsync_enabled",
+		values:{
+			N:"Disabled", Y:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SPane:{
+		title:"Gentle Fair Sleepers",
+		description:"Sleeper Fairness is a concept used by CFS which treat sleeping/waiting tasks as if they were in a run queue. This implies tasks which spend most of the time waiting for an user input and such will get a fair share of CPU when they need it. Disabling Gentle Fair Sleepers could improve UI responsiveness."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Gentle Fair Sleepers",
+		description:" ",
+		default:0,
+		action:"generic /sys/kernel/sched/gentle_fair_sleepers",
+		values:{
+			0:"Disabled", 1:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SPane:{
+		title:"Arch Power",
+		description:"Arch Power uses arch dependent power functions to be used instead of generic high resolution timer ticks and double ticks to reflect the relative capacity of each core."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Arch Power",
+		description:" ",
+		default:1,
+		action:"generic /sys/kernel/sched/arch_power",
+		values:{
+			0:"Disabled", 1:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+    ]
+}
+CTAG

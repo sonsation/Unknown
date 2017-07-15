@@ -1,0 +1,128 @@
+#!/system/bin/sh
+
+cat << CTAG
+{
+    name:CPU Governor,
+    elements:[
+	{ SPane:{
+		title:"Governor little cores",
+		description:"Selection for A53 cores. When you select either Interactive and Interextrem, then you need to do this for both cores. Using it on only one of them causes instabilities. Default is set to Interactive."
+	}},
+	{ SOptionList:{
+		default:`cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor`,
+                action:"governor /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+		values:[`while read values; do busybox printf "%s, \n" $values; done < /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors`]
+		
+	}},
+		{ SPane:{
+		title:"Governor big cores",
+		description:"Selection for A57 cores. Selection for A53 cores. When you select either Interactive and Interextrem, then you need to do this for both cores. Using it on only one of them causes instabilities. Default is set to Interactive."
+	}},
+	{ SOptionList:{
+		default:`cat /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor`,
+                action:"governor /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor",
+		values:[`while read values; do busybox printf "%s, \n" $values; done < /sys/devices/system/cpu/cpu4/cpufreq/scaling_available_governors`]	
+	}},
+	{ SPane:{
+		title:"Tunables little A53 cores",
+		description:"Configuration for the chosen governor"
+        }},
+	{ SDescription:{
+		description:""
+	}},
+	{ STreeDescriptor:{
+		path:"/sys/devices/system/cpu/cpu0/cpufreq",
+		generic: {
+			directory: {
+				STreeDescriptor:{
+					generic: {
+						directory: {},
+						element: {
+							SGeneric: { title:"@BASENAME" }
+						}
+					},
+					exclude: [
+						"cpu_util",
+						"enforced_mode",
+						"mode",
+						"sampling_rate_min",
+						"single_cluster0_min_freq",
+						"boostpulse",
+						"param_index"
+					]
+				},
+			}
+		},
+		exclude: [
+			"affected_cpus",
+			"cpuinfo_cur_freq",
+			"cpuinfo_max_freq",
+			"cpuinfo_min_freq",
+			"cpuinfo_transition_latency",
+			"related_cpus",
+			"scaling_available_governors",
+			"scaling_cur_freq",
+			"scaling_driver",
+			"scaling_governor",
+			"scaling_max_freq",
+			"scaling_min_freq",
+			"scaling_setspeed",
+			"stats"
+		]
+	}},
+	{ SDescription:{
+		description:" "
+	}},
+	{ SPane:{
+		title:"Tunables big A57 cores",
+		description:"Configuration for the chosen governor"
+        }},
+	{ SDescription:{
+		description:""
+	}},
+	{ STreeDescriptor:{
+		path:"/sys/devices/system/cpu/cpu4/cpufreq",
+		generic: {
+			directory: {
+				STreeDescriptor:{
+					generic: {
+						directory: {},
+						element: {
+							SGeneric: { title:"@BASENAME" }
+						}
+					},
+					exclude: [
+						"cpu_util",
+						"enforced_mode",
+						"mode",
+						"sampling_rate_min",
+						"single_cluster0_min_freq",
+						"boostpulse",
+						"param_index"
+					]
+				},
+			}
+		},
+		exclude: [
+			"affected_cpus",
+			"cpuinfo_cur_freq",
+			"cpuinfo_max_freq",
+			"cpuinfo_min_freq",
+			"cpuinfo_transition_latency",
+			"related_cpus",
+			"scaling_available_governors",
+			"scaling_cur_freq",
+			"scaling_driver",
+			"scaling_governor",
+			"scaling_max_freq",
+			"scaling_min_freq",
+			"scaling_setspeed",
+			"stats"
+		]
+	}},
+	{ SDescription:{
+		description:" "
+	}},
+    ]
+}
+CTAG

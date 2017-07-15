@@ -1,0 +1,121 @@
+#!/sbin/busybox sh
+
+cat << CTAG
+{
+    name:Wakelock control,
+    elements:[
+      	{ SPane:{
+		title:"Wakelock control",
+		description:" Manage wakelock for drivers."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SDescription:{
+		description:"WARNING: Disabling of wakelocks may have impact on various ROM features or apps such as S-Health & Google Fit."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"SensorHub",
+		description:" The SensorHub Wakelock is one of the biggest wake sources. Disable for better deep sleep and less awake time. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_sensorhub_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_sensorhub_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}	
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"SSP",
+		description:" The SSP Wakelock is one of the biggest wake sources after Sensorhub. Disable for better deep sleep and less awake time. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_ssp_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_ssp_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"bcm4773",
+		description:" The bcm4773 Wakelock (GPS chip) is one of the biggest wake sources after Sensorhub & SSP. Disable for better deep sleep and less awake time. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_bcm4773_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_bcm4773_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Wlan_rx",
+		description:" Wlan_rx is one of the biggest kernel wakelocks. Disable this for a better deep sleep. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_wlan_rx_wake_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_wlan_rx_wake_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"wlan_ctrl_wake",
+		description:" Disable Wlan_ctrl. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_wlan_ctrl_wake_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_wlan_ctrl_wake_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"wlan_wake",
+		description:" Disable Wlan_wake. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_wlan_wake_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_wlan_wake_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Wlan scan wakelock",
+		description:" Disable wifi scanning wakelock. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_wlan_scan_wake_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_wlan_scan_wake_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"NETLINK wakelock",
+		description:"Disable the NETLINK wakelock. Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_netlink_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_netlink_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Bluetooth wakelock",
+		description:" Disable bluetooth wakelock (might break bluetooth). Enable for stock behavior.\n",
+		default:`cat /sys/module/wakeup/parameters/enable_bluedroid_timer_wl`,
+		action:"generic /sys/module/wakeup/parameters/enable_bluedroid_timer_wl",
+		values:{ Y:"Enabled", N:"Disabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+    ]
+}
+CTAG

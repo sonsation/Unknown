@@ -1,0 +1,46 @@
+#!/system/bin/sh
+
+cat << CTAG
+{
+    name:Misc
+,
+    elements:[
+	{ SPane:{
+		title:"Xbox controller",
+		description:"Enable or disable Xbox controller support
+"
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"XPAD",
+		description:"Microsoft X-Box gamepad, rumblepad & Xbox360 controller 'BigX' LED support.\n",
+		default:$(echo "$(/res/synapse/actions/modules xpad)"),
+		action:"modules xpad",
+		values:[Disabled, Enabled,]
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SPane:{
+		title:"Dynamic Fsync",
+		description:"The fsync() function is intended to force a physical write of data from the buffer cache, and to assure that after a system crash or other failure that all data up to the time of the fsync() call is recorded on the disk."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		description:"Default is Enabled.\n",
+		default:1,
+		action:"generic /sys/kernel/dyn_fsync/Dyn_fsync_active",
+		values:{
+			0:"Disabled", 1:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+}},
+    ]
+}
+CTAG

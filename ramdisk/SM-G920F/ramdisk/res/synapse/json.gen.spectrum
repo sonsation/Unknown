@@ -1,0 +1,64 @@
+#!/system/bin/sh
+
+cat << CTAG
+{
+    name:"Spectrum",
+    elements:[
+	{ SPane:{
+		title:"Interactive Governor Tuning",
+		description:"WARNING: This is only for the interactive governor. Any other governor will be overriden when applying a profile."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"A53 Profile",
+		description:"Select a profile for the little cores.\n",
+		default:$(echo "$(/res/synapse/actions/tuning interactive_L)"),
+		action:"tuning interactive_L",
+		values:[Default, Performance, Battery,],
+		notify:[
+			{
+				on:APPLY,
+				do:[ REFRESH, APPLY ],
+				to:"/sys/devices/system/cpu/cpu0/cpufreq"
+			}
+		]
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"A57 Profile",
+		description:"Select your profile for the big cores.\n",
+		default:$(echo "$(/res/synapse/actions/tuning interactive_b)"),
+		action:"tuning interactive_b",
+		values:[Default, Performance, Battery,],
+		notify:[
+			{
+				on:APPLY,
+				do:[ REFRESH, APPLY ],
+				to:"/sys/devices/system/cpu/cpu4/cpufreq"
+			}
+		]
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Turbo Mode",
+		description:"Tunes the kernel for responsiveness at the cost of power usage.\n\nWARNING: A device REBOOT is required if you DISABLE this.\n",
+		default:`echo $(/res/synapse/actions/tuning interactive_turbo)`,
+		action:"tuning interactive_turbo",
+		values:[Disabled, Enabled,],
+		notify:[
+			{
+				on:APPLY,
+				do:[ REFRESH, APPLY ],
+				to:"/sys/devices/system/cpu/cpu4/cpufreq"
+			}
+		]
+	}},
+    ]
+}
+CTAG
