@@ -93,33 +93,12 @@
 	 *     - +0.20V (+0.05V per level) compared to default voltage on cluster1
 	 */
 
-    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L4 // 1600 MHz
-    #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L3 // 2200 MHz
+    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L3 // 1704 MHz
+    #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L2 // 2304 MHz
 
 #else
 
     #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L5 // 1500 MHz
     #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L4 // 2100 MHz
 
-#endif
-
-#ifdef CONFIG_SOC_EXYNOS7420
-#define CL0_MIN_FREQ		400000
-#define CL0_MAX_FREQ		1600000
-#define CL1_MIN_FREQ		800000
-#define CL1_MAX_FREQ		2200000
-#else
-#error "Please define core frequency ranges for current SoC."
-#endif
-
-#ifdef CONFIG_SOC_EXYNOS7420
-#define CL0_MAX_VOLT		1175000
-#define CL1_MAX_VOLT		1125000
-#define CL0_MIN_VOLT		500000
-#define CL1_MIN_VOLT		500000
-#define CL_MAX_VOLT(cl)		(cl == CL_ZERO ? CL0_MAX_VOLT : CL1_MAX_VOLT)
-#define CL_MIN_VOLT(cl)		(cl == CL_ZERO ? CL0_MIN_VOLT : CL1_MIN_VOLT)
-#define CL_VOLT_STEP		6250
-#else
-#error "Please define core voltage ranges for current SoC."
 #endif
