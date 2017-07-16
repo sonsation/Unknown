@@ -87,9 +87,6 @@ on property:sys.boot_completed=1
     # Set TCP
     write /proc/sys/net/ipv4/tcp_congestion_control westwood
 
-    # Set GPU values
-    write /sys/devices/platform/gpusysfs/gpu_max_clock 700
-
     # I/O management
     write /sys/block/sda/queue/rotational 0
     write /sys/block/sda/queue/rq_affinity 2
@@ -108,3 +105,4 @@ on property:sys.boot_completed=1
     # Misc
     write /sys/kernel/sched/gentle_fair_sleepers 0
     write /sys/module/sync/parameters/fsync_enabled 0
+    write /sys/module/workqueue/parameters/power_efficient 0
