@@ -37,7 +37,6 @@ Module.symvers
 /linux
 /vmlinux
 /vmlinuz
-/ramdisk
 /build
 /output
 /System.map
