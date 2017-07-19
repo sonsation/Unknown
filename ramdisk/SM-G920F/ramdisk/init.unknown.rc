@@ -105,4 +105,5 @@ on property:sys.boot_completed=1
     # Misc
     write /sys/kernel/sched/gentle_fair_sleepers 0
     write /sys/module/sync/parameters/fsync_enabled 0
-    write /sys/module/workqueue/parameters/power_efficient 0
+    write /sys/module/workqueue/parameters/power_efficient 1
+    write /sys/kernel/sched/arch_power 0
