@@ -33,7 +33,7 @@ debug.atrace.tags.enableflags=0
 #
 ro.bootimage.build.date=Wed Jun 14 18:22:05 KST 2017
 ro.bootimage.build.date.utc=1497432125
-ro.bootimage.build.fingerprint=samsung/zerofltektt/zerofltektt:7.0/NRD90M/G920KKKU3EQF3:user/test-keys
+ro.bootimage.build.fingerprint=samsung/zerofltektt/zerofltektt:7.0/NRD90M/G920KKKU3EQF3:user/release-keys
 
 # Screen mirroring / AllShare Cast fix
 wlan.wfd.hdcp=disable

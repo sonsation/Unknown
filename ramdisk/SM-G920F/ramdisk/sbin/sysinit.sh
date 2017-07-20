@@ -3,6 +3,21 @@
 mount -o remount,rw /;
 mount -o rw,remount /system
 
+if [ ! -f /su/xbin/busybox ]; then
+	BB=/system/xbin/busybox;
+else
+	BB=/su/xbin/busybox;
+fi;
+
+#####################################################################
+# Mount root as RW to apply tweaks and settings
+if [ "$($BB mount | grep rootfs | cut -c 26-27 | grep -c ro)" -eq "1" ]; then
+	$BB mount -o remount,rw /;
+fi;
+if [ "$($BB mount | grep system | grep -c ro)" -eq "1" ]; then
+	$BB mount -o remount,rw /system;
+fi;
+
 #####################################################################
 # Make Kernel Data Path
 
@@ -52,3 +67,7 @@ echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/.unknown/Kernel-test.log;
 
 
 ####################################################################
+
+$BB mount -t rootfs -o remount,ro rootfs
+$BB mount -o remount,ro /system
+$BB mount -o remount,rw /data
