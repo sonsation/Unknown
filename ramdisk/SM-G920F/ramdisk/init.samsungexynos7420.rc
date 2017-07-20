@@ -412,9 +412,6 @@ on boot
 # On-Board DM
     chmod 6755 /system/bin/dmm_v2
 
-# Use More optimized nr_requests for UFS
-    write /sys/block/sda/queue/nr_requests 256
-
 # SSWAP
     write /proc/sys/vm/swappiness 190
 
