@@ -110,13 +110,13 @@ static const unsigned int asv_voltage_7420_CA53[CPUFREQ_LEVEL_END_CA53] = {
 	1168750,	/* L3  1700 */
 	1168750,	/* L4  1600 */
 #endif
-	1012500,	/* L5  1500 */
-	 981250,	/* L6  1400 */
-	 950000,	/* L7  1300 */
-	 925000,	/* L8  1200 */
-	 900000,	/* L9  1100 */
-	 875000,	/* L10 1000 */
-	 850000,	/* L11  900 */
+	1118750,	/* L5  1500 */
+	1068750,	/* L6  1400 */
+	1018750,	/* L7  1300 */
+	 981250,	/* L8  1200 */
+	 943750,	/* L9  1100 */
+	 900000,	/* L10 1000 */
+	 862500,	/* L11  900 */
 	 825000,	/* L12  800 */
 	 787500,	/* L13  700 */
 	 750000,	/* L14  600 */
@@ -322,7 +322,6 @@ static void __init set_volt_table_CA53(void)
 	}
 
 	min_support_idx_CA53 = EXYNOS7420_CLUSTER0_MIN_LEVEL;	/* 400MHz */
-
 	pr_info("CPUFREQ of CA53 max_freq : L%d %u khz\n", max_support_idx_CA53,
 		exynos7420_freq_table_CA53[max_support_idx_CA53].frequency);
 	pr_info("CPUFREQ of CA53 min_freq : L%d %u khz\n", min_support_idx_CA53,
