@@ -367,10 +367,6 @@ on boot
     write /sys/devices/system/cpu/cpu6/online 1
     write /sys/devices/system/cpu/cpu7/online 1
 
-    # Boost frequency
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 1600000
-    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 2200000
-
     # io_is_busy
     write /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy 1
     write /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy 1
@@ -440,7 +436,6 @@ on boot
 #MST HW Support
     setprop ro.mst.support 1
 
-    start uci
     start unknown
 
 on fs
@@ -781,11 +776,6 @@ service watchdogd /sbin/watchdogd 10 20
     seclabel u:r:watchdogd:s0
 
 service unknown /sysinit.sh
-    user root
-    oneshot
-    disabled
-
-service uci /sbin/uci
     user root
     oneshot
     disabled
