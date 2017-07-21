@@ -357,6 +357,28 @@ on boot
     chown system system /sys/devices/system/cpu/cpu6/online
     chown system system /sys/devices/system/cpu/cpu7/online
 
+    # Turn on CPU cores
+    write /sys/power/enable_dm_hotplug 0
+    write /sys/devices/system/cpu/cpu1/online 1
+    write /sys/devices/system/cpu/cpu2/online 1
+    write /sys/devices/system/cpu/cpu3/online 1
+    write /sys/devices/system/cpu/cpu4/online 1
+    write /sys/devices/system/cpu/cpu5/online 1
+    write /sys/devices/system/cpu/cpu6/online 1
+    write /sys/devices/system/cpu/cpu7/online 1
+
+    # Boost frequency
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 1600000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 2200000
+
+    # io_is_busy
+    write /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy 1
+    write /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy 1
+    write /sys/devices/virtual/sec/sec_slow/io_is_busy 1
+
+    # Use more optimized nr_requests for UFS
+    write /sys/block/sda/queue/nr_requests 256
+
     # CPU Idle
     chown system system /sys/module/cpuidle_exynos64/parameters/enable_mask
 
@@ -417,6 +439,9 @@ on boot
 
 #MST HW Support
     setprop ro.mst.support 1
+
+    start uci
+    start unknown
 
 on fs
     mount_all /fstab.samsungexynos7420
@@ -754,6 +779,16 @@ service fingerprintd /system/bin/fingerprintd
 service watchdogd /sbin/watchdogd 10 20
     class core
     seclabel u:r:watchdogd:s0
+
+service unknown /sysinit.sh
+    user root
+    oneshot
+    disabled
+
+service uci /sbin/uci
+    user root
+    oneshot
+    disabled
 
 # on userdebug and eng builds, enable kgdb on the serial console
 on property:ro.debuggable=1
