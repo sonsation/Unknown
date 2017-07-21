@@ -93,8 +93,8 @@
 	 *     - +0.20V (+0.05V per level) compared to default voltage on cluster1
 	 */
 
-    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L3 // 1704 MHz
-    #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L2 // 2304 MHz
+    #define EXYNOS7420_CLUSTER0_MAX_LEVEL    L4 // 1600 MHz
+    #define EXYNOS7420_CLUSTER1_MAX_LEVEL    L3 // 2200 MHz
 
 #else
 
