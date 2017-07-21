@@ -2,7 +2,7 @@
 #define _UAPI__ASM_GENERIC_PARAM_H
 
 #ifndef HZ
-#define HZ CONFIG_HZ
+#define HZ 100
 #endif
 
 #ifndef EXEC_PAGESIZE
