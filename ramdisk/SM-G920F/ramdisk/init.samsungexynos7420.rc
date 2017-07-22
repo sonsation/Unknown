@@ -372,6 +372,12 @@ on boot
     write /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy 1
     write /sys/devices/virtual/sec/sec_slow/io_is_busy 1
 
+    # Enable Laptop Mode
+    write /proc/sys/vm/laptop_mode 1
+
+    # Disable FSync
+    write /sys/module/sync/parameters/fsync_enabled N
+
     # Use more optimized nr_requests for UFS
     write /sys/block/sda/queue/nr_requests 256
 
