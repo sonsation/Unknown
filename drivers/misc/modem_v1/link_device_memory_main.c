@@ -12,7 +12,7 @@
  *
  */
 
-#define CREATE_TRACE_POINTS
+//#define CREATE_TRACE_POINTS
 
 #include <linux/module.h>
 
@@ -302,7 +302,9 @@ static int xmit_ipc_to_rb(struct mem_link_device *mld, enum sipc_ch_id ch,
 		skb_queue_tail(skb_txq, skb);
 		start_tx_timer(mld, &mld->sbd_tx_timer);
 
+#ifdef DEBUG_MODEM_IF
 		trace_mif_event(skb, skb->len, FUNC);
+#endif
 	}
 
 	spin_unlock_irqrestore(&rb->lock, flags);
