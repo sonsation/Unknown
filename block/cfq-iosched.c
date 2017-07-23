@@ -4646,17 +4646,17 @@ static int __init cfq_init(void)
 	/*
 	 * could be 0 on HZ < 1000 setups
 	 */
-	if (!cfq_slice_async)
+	if (CONFIG_HZ >= 1000 && !cfq_slice_async)
 		cfq_slice_async = 1;
 	
 	/* Do not touch cfq_slice_idle if it is zero */
 	/*
-	if (!cfq_slice_idle)
+	if (CONFIG_HZ >= 1000 && !cfq_slice_idle)
 		cfq_slice_idle = 1;
          */
 
 #ifdef CONFIG_CFQ_GROUP_IOSCHED
-	if (!cfq_group_idle)
+	if (CONFIG_HZ >= 1000 && !cfq_group_idle)
 		cfq_group_idle = 1;
 
 	ret = blkcg_policy_register(&blkcg_policy_cfq);
