@@ -72,14 +72,6 @@ int strcasecmp(const char *s1, const char *s2)
 }
 EXPORT_SYMBOL(strncasecmp);
 #endif
-#ifndef __HAVE_ARCH_STRNICMP
-#undef strnicmp
-int strnicmp(const char *s1, const char *s2, size_t len)
-{
-	return strncasecmp(s1, s2, len);
-}
-EXPORT_SYMBOL(strcasecmp);
-#endif
 
 #ifndef __HAVE_ARCH_STRCPY
 /**
