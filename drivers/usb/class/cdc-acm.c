@@ -969,7 +969,7 @@ static int check_samsung_feature_ums_acm_device(struct usb_device *dev)
 	if (!dev->product)
 		return ret;
 
-	if (!strnicmp(dev->product , "SM-B360E", 8))
+	if (!strncasecmp(dev->product , "SM-B360E", 8))
 		ret = 1;
 
 	return ret;

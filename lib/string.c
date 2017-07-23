@@ -60,7 +60,7 @@ int strncasecmp(const char *s1, const char *s2, size_t len)
 	} while (--len);
 	return (int)c1 - (int)c2;
 }
-EXPORT_SYMBOL(strnicmp);
+EXPORT_SYMBOL(strncasecmp);
 #endif
 
 #ifndef __HAVE_ARCH_STRCASECMP
@@ -74,7 +74,7 @@ int strcasecmp(const char *s1, const char *s2)
 	} while (c1 == c2 && c1 != 0);
 	return c1 - c2;
 }
-EXPORT_SYMBOL(strncasecmp);
+EXPORT_SYMBOL(strcasecmp);
 #endif
 
 #ifndef __HAVE_ARCH_STRCPY

@@ -1665,11 +1665,11 @@ static int __init __sysmmu_init_prop(struct device *sysmmu,
 	prop_node = of_get_child_by_name(sysmmu->of_node, "prop-map");
 	if (prop_node) {
 		if (!of_property_read_string(prop_node, "tlbinv-nonblock", &s))
-			if (strnicmp(s, "yes", 3) == 0)
+			if (strncasecmp(s, "yes", 3) == 0)
 				drvdata->prop |= SYSMMU_PROP_NONBLOCK_TLBINV;
 
 		if (!of_property_read_string(prop_node, "block-stop", &s))
-			if (strnicmp(s, "yes", 3) == 0)
+			if (strncasecmp(s, "yes", 3) == 0)
 				drvdata->prop |= SYSMMU_PROP_STOP_BLOCK;
 
 		of_node_put(prop_node);

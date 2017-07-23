@@ -95,7 +95,7 @@ static int check_gamepad_device(struct usb_device *dev)
 	if (!dev->product)
 		return ret;
 
-	if (!strnicmp(dev->product , "Gamepad for SAMSUNG", 19))
+	if (!strncasecmp(dev->product , "Gamepad for SAMSUNG", 19))
 		ret = 1;
 
 	return ret;
@@ -110,7 +110,7 @@ static int check_lanhub_device(struct usb_device *dev)
 	if (!dev->product)
 		return ret;
 
-	if (!strnicmp(dev->product , "LAN9512", 8))
+	if (!strncasecmp(dev->product , "LAN9512", 8))
 		ret = 1;
 
 	return ret;
