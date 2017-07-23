@@ -321,11 +321,14 @@ MAKEFLAGS += --include-dir=$(srctree)
 $(srctree)/scripts/Kbuild.include: ;
 include $(srctree)/scripts/Kbuild.include
 
+GRAPHITE = -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -floop-flatten -floop-nest-optimize -fgraphite
++
+
 # Make variables (CC, etc...)
 
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= $(CROSS_COMPILE)gcc
+CC		= $(CCACHE) $(CROSS_COMPILE)gcc $(GRAPHITE)
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -349,16 +352,21 @@ ifeq ($(CONFIG_CRYPTO_FIPS),)
     export READELF
 endif
 
-CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
-		  -Wbitwise -Wno-return-void $(CF)
-		  
-CFLAGS_MODULE   =
-AFLAGS_MODULE   =
-LDFLAGS_MODULE  = --strip-debug
-CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
-CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
+CHECKFLAGS     := \
+			-D__linux__ \
+			-Dlinux \
+			-D__STDC__ \
+			-Dunix \
+			-D__unix__ \
+			-Wbitwise \
+			-Wno-return-void $(CF)
 
+CFLAGS_MODULE   = $(GRAPHITE)
+AFLAGS_MODULE   = $(GRAPHITE)
+LDFLAGS_MODULE  = $(GRAPHITE)
+CFLAGS_KERNEL   = $(GRAPHITE) -fsingle-precision-constant
+AFLAGS_KERNEL   = $(GRAPHITE)
+CFLAGS_GCOV	    = -fprofile-arcs -ftest-coverage
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE    := \
@@ -379,12 +387,24 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -w -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration -fno-pic \
-		   -Wno-format-security -Wno-logical-not-parentheses \
-		   -fno-delete-null-pointer-checks \
-                   -std=gnu89 \
+KBUILD_CFLAGS   := -DNDEBUG $(GRAPHITE) \
+			-fdiagnostics-show-option \
+			-finline-functions \
+			-fno-common \
+			-fno-delete-null-pointer-checks \
+			-fno-strict-aliasing \
+			-fpredictive-commoning \
+			-march=armv8-a+crc \
+			-mtune=cortex-a57.cortex-a53 \
+			-std=gnu89 \
+			-pipe \
+			-Wall \
+			-Werror \
+			-Werror-implicit-function-declaration \
+			-Wno-format-security \
+			-Wno-trigraphs \
+			-Wstrict-prototypes \
+			-Wundef
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -621,6 +641,10 @@ KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 
 # Kill format truncation warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
+
+KBUILD_CFLAGS	+= \
+		$(call cc-disable-warning,maybe-uninitialized,) \
+		$(call cc-option,--param=allow-store-data-races=0)
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
