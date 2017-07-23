@@ -322,13 +322,12 @@ $(srctree)/scripts/Kbuild.include: ;
 include $(srctree)/scripts/Kbuild.include
 
 GRAPHITE = -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -floop-flatten -floop-nest-optimize -fgraphite
-+
 
 # Make variables (CC, etc...)
 
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= $(CCACHE) $(CROSS_COMPILE)gcc $(GRAPHITE)
+CC		= $(CROSS_COMPILE)gcc $(GRAPHITE)
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -352,21 +351,16 @@ ifeq ($(CONFIG_CRYPTO_FIPS),)
     export READELF
 endif
 
-CHECKFLAGS     := \
-			-D__linux__ \
-			-Dlinux \
-			-D__STDC__ \
-			-Dunix \
-			-D__unix__ \
-			-Wbitwise \
-			-Wno-return-void $(CF)
+CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+		  -Wbitwise -Wno-return-void $(CF)
+		  
+CFLAGS_MODULE   =
+AFLAGS_MODULE   =
+LDFLAGS_MODULE  = --strip-debug
+CFLAGS_KERNEL	=
+AFLAGS_KERNEL	=
+CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
-CFLAGS_MODULE   = $(GRAPHITE)
-AFLAGS_MODULE   = $(GRAPHITE)
-LDFLAGS_MODULE  = $(GRAPHITE)
-CFLAGS_KERNEL   = $(GRAPHITE) -fsingle-precision-constant
-AFLAGS_KERNEL   = $(GRAPHITE)
-CFLAGS_GCOV	    = -fprofile-arcs -ftest-coverage
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE    := \
@@ -404,7 +398,9 @@ KBUILD_CFLAGS   := -DNDEBUG $(GRAPHITE) \
 			-Wno-format-security \
 			-Wno-trigraphs \
 			-Wstrict-prototypes \
-			-Wundef
+			-Wundef \
+                        -w \
+                        -fno-pic 
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -634,7 +630,7 @@ KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 
 # optimizations
-KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -march=armv8-a+crc -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53
+KBUILD_CFLAGS	+= -O2
 
 # Needed to unbreak GCC 7.x and above
 KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
