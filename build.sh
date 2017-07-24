@@ -16,7 +16,7 @@ PAGE_SIZE=2048
 DTB_PADDING=0
 
 VERSION=$(cat version)
-ZIP_NAME=UnknownKernel_SM-G920XX_v$VERSION.zip
+ZIP_NAME=UnknownKernel_$MODEL_v$VERSION.zip
 ZIP_FILE_DIR=$RDIR/output
 
 FUNC_CLEAN_FILE()
@@ -65,7 +65,7 @@ FUNC_BUILD_DTIMAGE_TARGET()
 		DTSFILES="exynos7420-zeroflte_kor_06"
 		;;
 	zerolte)
-		DTSFILES="exynos7420-zerolte_eur_open_06"
+		DTSFILES="exynos7420-zerolte_kor_06"
 		;;
 	*)
 		echo "Unknown device: $MODEL"
