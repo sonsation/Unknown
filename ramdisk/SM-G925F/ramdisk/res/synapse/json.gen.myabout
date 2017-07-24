@@ -1,0 +1,24 @@
+#!/sbin/busybox sh
+
+cat << CTAG
+{
+    name:"ABOUT",
+    elements:[
+	{ SLiveLabel:{
+		refresh:10000000,
+		style:"bold",
+		action:"echo Unknown-kernel"
+	}},
+    	{ SLiveLabel:{
+		refresh:10000000,
+		action:"echo made by Sonsation"
+	}},
+
+	{ SButton:{
+		label:"Github source",
+		action:"am start -a android.intent.action.VIEW -d http://github.com/sonsation/unknown > /dev/null;
+		echo Opening...;"
+	}},
+    ]
+}
+CTAG

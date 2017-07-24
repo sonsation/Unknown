@@ -1,0 +1,113 @@
+#!/res/busybox sh
+
+export PATH=/res/asset:$PATH
+
+cat << CTAG
+{
+    name:Battery Saving,
+    elements:[
+	{ SPane:{
+		title:"PEWQ (Power-Efficient Workqueues)",
+		description:"Enable or disable PEWQ will help to reduce power consumption at the cost of slight performance overhead. By enabling this, PEWQ are used for unbound scheduled work to save load on sibling CPU cores and queuing work on CPU 0."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Enable PEWQ",
+		description:" ",
+		default:Y,
+		action:"generic /sys/module/workqueue/parameters/power_efficient",
+		values:{
+			N:"Disabled", Y:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SPane:{
+		title:"HMP Thresholds up/down ratios for task migrating",
+		description:"Adjust HMP ratios for up/down scaling for tasks migrating between A53 LITTLE cores and A57 big cores. Higher up-threshold values use less battery because use more of the power efficient Little cores."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Profile",
+		description:"Select your profile for HMP thresholds.\n",
+		default:$(echo "$(/res/synapse/actions/tuning hmp)"),
+		action:"tuning hmp",
+		values:[Default, Performance, Stock,],
+		notify:[
+			{
+				on:APPLY,
+				do:[ REFRESH, APPLY ],
+				to:[
+					"hmp /sys/kernel/hmp/up_threshold",
+					"hmp /sys/kernel/hmp/down_threshold"
+				],
+			}
+		]
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SSeekBar:{
+		title:"HMP UP Thresholds",
+		description:"Min load required for migrating tasks to the faster A57 big cores.\n",
+		min:1, max:1000, unit:"", step:1,
+		default:$(cat /sys/kernel/hmp/up_threshold),
+		action:"hmp /sys/kernel/hmp/up_threshold"
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SSeekBar:{
+		title:"HMP DOWN Thresholds",
+		description:"Max load allowed for tasks migrating to the slower A53 little cores.\n",
+		min:1, max:512, unit:"", step:1,
+		default:$(cat /sys/kernel/hmp/down_threshold),
+		action:"hmp /sys/kernel/hmp/down_threshold"
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+        { SPane:{
+                title:"Power Aware Scheduling",
+                description:"Power Aware Migration attempts to migrate tasks between cores with capacity depending on the tracked load and priority. The aim is to only use the big cores for tasks which really need the extra performance and thereby improve power consumption by running everything else on the slow cores. Enabling this may cause performance degradation."
+        }},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		description:"",
+		default:0,
+		action:"generic /sys/kernel/hmp/power_migration",
+		values:{
+			0:"Disabled", 1:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+        { SPane:{
+                title:"HMP LITTLE Packing",
+                description:"Allows the HMP Scheduler to pack small tasks into CPUs in the smallest HMP domain. Power savings at a slight cost to performance."
+        }},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		description:"",
+		default:0,
+		action:"generic /sys/kernel/hmp/packing_enable",
+		values:{
+			0:"Disabled", 1:"Enabled"
+		}
+	}},
+	{ SSpacer:{
+		height:1
+    }},
+    ]
+}
+CTAG

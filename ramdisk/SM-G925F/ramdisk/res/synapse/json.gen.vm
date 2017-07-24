@@ -1,0 +1,47 @@
+#!/system/bin/sh
+
+cat << CTAG
+{
+    name:Virtual Memory,
+    elements:[
+	{ SPane:{
+		title:"Virtual Memory",
+		description:"Tune the virtual memory of the disk."
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Zswap percentage",
+		description:"The amount of memory zswap can use for compressing pages.\n",
+		min:0, max:50, unit:" %", step:1,
+		default:$(cat /sys/module/zswap/parameters/max_pool_percent),
+		action:"generic /sys/module/zswap/parameters/max_pool_percent"
+	}},
+	{ SSpacer:{
+		height:2
+	}},
+	{ SSeekBar:{
+		title:"Swappiness",
+		description:"A low value means the kernel will try to avoid swapping as much as possible where a higher value instead will make the kernel aggressively try to use swap space.\n",
+		max:200,
+		min:0,
+		step:10,
+		default:$(cat /proc/sys/vm/swappiness),
+		action:"generic /proc/sys/vm/swappiness",
+	}},
+	{ SSpacer:{
+		height:1
+	}},
+	{ SOptionList:{
+		title:"Laptop Mode",
+		description:"Save battery and performance by delaying writebacks. Caution: When the phone suddenly shutsdown you will lose all data from the past 10 minutes.\n",
+		default:1,
+		action:"generic /proc/sys/vm/laptop_mode",
+		values:{ 0:"Disabled", 1:"Enabled"
+		}
+	}},
+    ]
+}
+CTAG
+

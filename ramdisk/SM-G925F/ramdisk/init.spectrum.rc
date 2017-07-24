@@ -1,0 +1,57 @@
+# SPECTRUM KERNEL MANAGER
+# Ramdisk file for profile based kernel management
+# Implimentation inspired by Franco's fku profiles
+
+# Initialization
+on property:sys.boot_completed=1
+   # Set default profile on first boot
+   exec u:r:init:s0 root root -- /init.spectrum.sh
+   exec u:r:su:s0 root root -- /init.spectrum.sh
+   # Enable Spectrum support
+   setprop spectrum.support 1
+   # Add kernel name
+   setprop persist.spectrum.kernel Unknown_kernel
+
+# Balance (default profile)
+on property:persist.spectrum.profile=0
+
+    # Max freq values
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq 1600000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu5/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq 2200000
+    write /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq 2200000
+
+    # Stock GPU values
+    write /sys/devices/14ac0000.mali/dvfs_governor interactive
+    write /sys/devices/platform/gpusysfs/gpu_min_clock 266
+    write /sys/devices/platform/gpusysfs/gpu_max_clock 772
+
+# Performance
+on property:persist.spectrum.profile=1
+
+
+# Battery
+on property:persist.spectrum.profile=2
+
+    # Max freq values
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 1500000
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq 1500000
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq 1500000
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq 1500000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2100000
+    write /sys/devices/system/cpu/cpu5/cpufreq/scaling_max_freq 2100000
+    write /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq 2100000
+    write /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq 2100000
+
+    # Stock GPU values
+    write /sys/devices/14ac0000.mali/dvfs_governor interactive
+    write /sys/devices/platform/gpusysfs/gpu_min_clock 266
+    write /sys/devices/platform/gpusysfs/gpu_max_clock 700
+
+# Gaming
+on property:persist.spectrum.profile=3
+
