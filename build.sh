@@ -16,7 +16,6 @@ PAGE_SIZE=2048
 DTB_PADDING=0
 
 VERSION=$(cat version)
-ZIP_NAME=UnknownKernel_$MODEL_v$VERSION.zip
 ZIP_FILE_DIR=$RDIR/output
 
 FUNC_CLEAN_FILE()
@@ -178,10 +177,11 @@ FUNC_BUILD_ZIP()
 
         echo ""
         echo "Building Zip File"
-
+        
+        ZIP_NAME=UnknownKernel_$MODEL-v$VERSION.zip
         cd $RDIR/build
-        zip -r BUILD *
-        mv -f $RDIR/build/BUILD.zip $ZIP_FILE_DIR/$ZIP_NAME
+        zip -r BUILD_$MODEL.zip ./*
+        mv -f $RDIR/build/BUILD_$MODEL.zip $ZIP_FILE_DIR/$ZIP_NAME
 
 }
 
@@ -191,6 +191,12 @@ FUNC_MAIN()
         FUNC_BUILD_DTIMAGE_TARGET
 	FUNC_BUILD_RAMDISK
         FUNC_BUILD_ZIP 	
+}
+
+OPTION_0()
+{
+FUNC_CLEAN
+exit
 }
 
 OPTION_1()
@@ -206,7 +212,6 @@ echo "####################FINSH########################"
 echo "You can now find your Kernel in the Output folder"
 echo ""
 echo ""
-exit
 }
 
 OPTION_2()
@@ -221,14 +226,17 @@ echo ""
 echo "####################FINSH########################"
 echo "You can now find your Kernel in the Output folder"
 echo ""
+}
+
+OPTION_3()
+{
+OPTION_0
+OPTION_1
+OPTION_0
+OPTION_2
 exit
 }
 
-OPTION_0()
-{
-FUNC_CLEAN
-exit
-}
 
 # -------------
 # MAIN START
@@ -239,7 +247,8 @@ echo "Kernel Version: v$VERSION"
 echo " 0) Clean Workspace"
 echo " 1) Build UnknownKernel for S6(F/K/S/L)"
 echo " 2) Build UnknownKernel for S6 Edge(F/K/S/L)"
-echo " 3) Exit"
+echo " 3) Build all models"
+echo " 4) Exit"
 echo ""
 read -p "Please select an option " select
 echo ""
