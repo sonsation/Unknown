@@ -1,8 +1,5 @@
 #!/system/bin/sh
 
-mount -o remount,rw /;
-mount -o rw,remount /system
-
 if [ ! -f /su/xbin/busybox ]; then
 	BB=/system/xbin/busybox;
 else
