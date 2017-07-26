@@ -22,22 +22,22 @@
 
 #include "power.h"
 
-static bool enable_sensorhub_wl = false;
+static bool enable_sensorhub_wl = true;
 module_param(enable_sensorhub_wl, bool, 0644);
 
-static bool enable_ssp_wl = false;
+static bool enable_ssp_wl = true;
 module_param(enable_ssp_wl, bool, 0644);
 
-static bool enable_bcm4773_wl = false;
+static bool enable_bcm4773_wl = true;
 module_param(enable_bcm4773_wl, bool, 0644);
 
-static bool enable_wlan_rx_wake_wl = false;
+static bool enable_wlan_rx_wake_wl = true;
 module_param(enable_wlan_rx_wake_wl, bool, 0644);
 
-static bool enable_wlan_ctrl_wake_wl = false;
+static bool enable_wlan_ctrl_wake_wl = true;
 module_param(enable_wlan_ctrl_wake_wl, bool, 0644);
 
-static bool enable_wlan_wake_wl = false;
+static bool enable_wlan_wake_wl = true;
 module_param(enable_wlan_wake_wl, bool, 0644);
 
 static bool enable_bluedroid_timer_wl = true;
