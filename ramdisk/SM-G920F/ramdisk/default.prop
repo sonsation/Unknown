@@ -35,6 +35,11 @@ ro.bootimage.build.date=Wed Jun 14 18:22:05 KST 2017
 ro.bootimage.build.date.utc=1497432125
 ro.bootimage.build.fingerprint=samsung/zerofltektt/zerofltektt:7.0/NRD90M/G920KKKU3EQF3:user/release-keys
 
-# Screen mirroring / AllShare Cast fix
-wlan.wfd.hdcp=disable
+# SELinux & Knox related
+persist.cne.feature=0
+persist.security.ams.enforcing=0
+androidboot.selinux=0
+ro.securestorage.knox=false
 ro.securestorage.support=false
+ro.security.mdpp.ux=Disabled
+wlan.wfd.hdcp=disable

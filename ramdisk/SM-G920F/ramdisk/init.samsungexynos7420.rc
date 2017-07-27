@@ -442,7 +442,7 @@ on boot
 #MST HW Support
     setprop ro.mst.support 1
 
-    start unknown
+    start sysinit
 
 on fs
     mount_all /fstab.samsungexynos7420
@@ -781,8 +781,11 @@ service watchdogd /sbin/watchdogd 10 20
     class core
     seclabel u:r:watchdogd:s0
 
-service unknown /sysinit.sh
+service sysinit /sbin/sysinit.sh
+    class late_start
     user root
+    group root
+    seclabel u:r:init:s0
     oneshot
     disabled
 
