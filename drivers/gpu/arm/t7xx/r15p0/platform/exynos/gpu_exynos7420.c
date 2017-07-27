@@ -48,13 +48,16 @@ void __iomem *g3d1_outstanding_regs;
 
 /*  clock, voltage, asv_abb, min_threshold, max_threshold, down_staycount, time, mem_freq, int_freq, cpu_freq (cl0) */
 static gpu_dvfs_info gpu_dvfs_table_default[] = {
-	{ 772, 900000, 0, 98, 100, 1, 0, 1552000, 400000, 1500000 },
-	{ 700, 864000, 0, 98,  99, 1, 0, 1552000, 400000, 1200000 },
-	{ 600, 814000, 0, 78,  85, 1, 0, 1552000, 413000,  900000 },
-	{ 544, 786000, 0, 78,  85, 1, 0, 1026000, 413000,  600000 },
-	{ 420, 724000, 0, 78,  85, 1, 0, 1026000, 267000,       0 },
-	{ 350, 689000, 0, 78,  85, 1, 0,  543000, 200000,       0 },
-	{ 266, 647000, 0, 78,  85, 1, 0,  416000, 160000,       0 },
+	{ 852, 900000, 0, 85, 100, 1, 0, 1552000, 400000, 1000000 },
+	{ 772, 862000, 0, 80,  95, 1, 0, 1552000, 400000, 1300000 },
+	{ 700, 825000, 0, 75,  90, 1, 0, 1552000, 400000,  900000 },
+	{ 600, 787500, 0, 70,  85, 1, 0, 1552000, 413000,  600000 },
+	{ 544, 750000, 0, 65,  80, 1, 0, 1026000, 413000,       0 },
+	{ 420, 712500, 0, 60,  75, 1, 0, 1026000, 267000,       0 },
+	{ 350, 675000, 0, 55,  70, 1, 0,  543000, 200000,       0 },
+	{ 266, 637500, 0, 50,  65, 1, 0,  416000, 160000,       0 },
+	{ 160, 600000, 0, 45,  60, 1, 0,  416000, 160000,       0 },
+	{ 100, 562500, 0, 40,  55, 1, 0,  416000, 160000,       0 },
 };
 
 static int mif_min_table[] = {
@@ -66,21 +69,21 @@ static int mif_min_table[] = {
 };
 
 static int hpm_freq_table[] = {
-	/* 772, 700, 600, 544, 420, 350, 266 */
-	3, 3, 3, 3, 2, 2, 2,
+	/* 852, 772, 700, 600, 544, 420, 350, 266, 160, 100 */
+	3, 3, 3, 3, 3, 2, 2, 2, 2, 2
 };
 
 static gpu_attribute gpu_config_attributes[] = {
-	{GPU_MAX_CLOCK, 772},
-	{GPU_MAX_CLOCK_LIMIT, 772},
-	{GPU_MIN_CLOCK, 266},
-	{GPU_DVFS_START_CLOCK, 266},
-	{GPU_DVFS_BL_CONFIG_CLOCK, 266},
+	{GPU_MAX_CLOCK, 852},
+	{GPU_MAX_CLOCK_LIMIT, 852},
+	{GPU_MIN_CLOCK, 100},
+	{GPU_DVFS_START_CLOCK, 100},
+	{GPU_DVFS_BL_CONFIG_CLOCK, 100},
 	{GPU_GOVERNOR_TYPE, G3D_DVFS_GOVERNOR_INTERACTIVE},
-	{GPU_GOVERNOR_START_CLOCK_DEFAULT, 266},
-	{GPU_GOVERNOR_START_CLOCK_INTERACTIVE, 266},
-	{GPU_GOVERNOR_START_CLOCK_STATIC, 266},
-	{GPU_GOVERNOR_START_CLOCK_BOOSTER, 266},
+	{GPU_GOVERNOR_START_CLOCK_DEFAULT, 100},
+	{GPU_GOVERNOR_START_CLOCK_INTERACTIVE, 100},
+	{GPU_GOVERNOR_START_CLOCK_STATIC, 100},
+	{GPU_GOVERNOR_START_CLOCK_BOOSTER, 100},
 	{GPU_GOVERNOR_TABLE_DEFAULT, (uintptr_t)&gpu_dvfs_table_default},
 	{GPU_GOVERNOR_TABLE_INTERACTIVE, (uintptr_t)&gpu_dvfs_table_default},
 	{GPU_GOVERNOR_TABLE_STATIC, (uintptr_t)&gpu_dvfs_table_default},
@@ -89,8 +92,8 @@ static gpu_attribute gpu_config_attributes[] = {
 	{GPU_GOVERNOR_TABLE_SIZE_INTERACTIVE, GPU_DVFS_TABLE_LIST_SIZE(gpu_dvfs_table_default)},
 	{GPU_GOVERNOR_TABLE_SIZE_STATIC, GPU_DVFS_TABLE_LIST_SIZE(gpu_dvfs_table_default)},
 	{GPU_GOVERNOR_TABLE_SIZE_BOOSTER, GPU_DVFS_TABLE_LIST_SIZE(gpu_dvfs_table_default)},
-	{GPU_GOVERNOR_INTERACTIVE_HIGHSPEED_CLOCK, 420},
-	{GPU_GOVERNOR_INTERACTIVE_HIGHSPEED_LOAD, 95},
+	{GPU_GOVERNOR_INTERACTIVE_HIGHSPEED_CLOCK, 544},
+	{GPU_GOVERNOR_INTERACTIVE_HIGHSPEED_LOAD, 50},
 	{GPU_GOVERNOR_INTERACTIVE_HIGHSPEED_DELAY, 0},
 	{GPU_DEFAULT_VOLTAGE, 900000},
 	{GPU_COLD_MINIMUM_VOL, 0},
@@ -100,8 +103,8 @@ static gpu_attribute gpu_config_attributes[] = {
 	{GPU_TEMP_THROTTLING2, 544},
 	{GPU_TEMP_THROTTLING3, 420},
 	{GPU_TEMP_THROTTLING4, 350},
-	{GPU_TEMP_TRIPPING, 900},
-	{GPU_POWER_COEFF, 443}, /* all core on param */
+	{GPU_TEMP_TRIPPING, 266},
+	{GPU_POWER_COEFF, 900}, /* all core on param */
 	{GPU_DVFS_TIME_INTERVAL, 5},
 	{GPU_DEFAULT_WAKEUP_LOCK, 1},
 	{GPU_BUS_DEVFREQ, 1},
@@ -127,8 +130,8 @@ static gpu_attribute gpu_config_attributes[] = {
 	{GPU_DVFS_POLLING_TIME, 30},
 	{GPU_PMQOS_INT_DISABLE, 1},
 	{GPU_PMQOS_MIF_MAX_CLOCK, 1464000},
-	{GPU_PMQOS_MIF_MAX_CLOCK_BASE, 772},
-	{GPU_CL_DVFS_START_BASE, 266},
+	{GPU_PMQOS_MIF_MAX_CLOCK_BASE, 852},
+	{GPU_CL_DVFS_START_BASE, 100},
 	{GPU_DEBUG_LEVEL, DVFS_WARNING},
 	{GPU_TRACE_LEVEL, TRACE_ALL},
 #ifdef CONFIG_MALI_DVFS_USER
@@ -149,7 +152,7 @@ int gpu_dvfs_decide_max_clock(struct exynos_context *platform)
 	if (!platform)
 		return -1;
 	if (cal_get_table_ver() == 12)
-		platform->gpu_max_clock = platform->table[GPU_L2].clock;
+		platform->gpu_max_clock = platform->table[GPU_L0].clock;
 
 	return 0;
 }

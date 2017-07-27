@@ -51,7 +51,7 @@ typedef enum {
 } gpu_dvfs_debug_level;
 
 typedef enum {
-	GPU_L0,
+	GPU_L0 = 0,
 	GPU_L1,
 	GPU_L2,
 	GPU_L3,
@@ -59,6 +59,8 @@ typedef enum {
 	GPU_L5,
 	GPU_L6,
 	GPU_L7,
+	GPU_L8,
+	GPU_L9,
 	GPU_MAX_LEVEL,
 } gpu_clock_level;
 
