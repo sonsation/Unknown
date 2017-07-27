@@ -262,7 +262,6 @@
 #include <linux/syscalls.h>
 #include <linux/completion.h>
 #include <linux/freezer.h>
-
 #include <crypto/chacha20.h>
 
 #include <asm/processor.h>
@@ -413,6 +412,9 @@ static DECLARE_WAIT_QUEUE_HEAD(random_write_wait);
 static DECLARE_WAIT_QUEUE_HEAD(urandom_init_wait);
 static struct fasync_struct *fasync;
 
+static DEFINE_SPINLOCK(random_ready_list_lock);
+static LIST_HEAD(random_ready_list);
+
 struct crng_state {
 	__u32		state[16];
 	unsigned long	init_time;
@@ -474,6 +476,7 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 			       size_t nbytes, int min, int rsvd);
 static ssize_t _extract_entropy(struct entropy_store *r, void *buf,
 				size_t nbytes, int fips);
+
 static void crng_reseed(struct crng_state *crng, struct entropy_store *r);
 static void push_to_pool(struct work_struct *work);
 static __u32 input_pool_data[INPUT_POOL_WORDS];
@@ -615,6 +618,22 @@ static void fast_mix(struct fast_pool *f)
 	f->count++;
 }
 
+static void process_random_ready_list(void)
+{
+	unsigned long flags;
+	struct random_ready_callback *rdy, *tmp;
+
+	spin_lock_irqsave(&random_ready_list_lock, flags);
+	list_for_each_entry_safe(rdy, tmp, &random_ready_list, list) {
+		struct module *owner = rdy->owner;
+
+		list_del_init(&rdy->list);
+		rdy->func(rdy);
+		module_put(owner);
+	}
+	spin_unlock_irqrestore(&random_ready_list_lock, flags);
+}
+
 /*
  * Credit (or debit) the entropy store with n bits of entropy.
  * Use credit_entropy_bits_safe() if the value comes from userspace
@@ -693,7 +712,7 @@ retry:
 	if (r == &input_pool) {
 		int entropy_bits = entropy_count >> ENTROPY_SHIFT;
 
-                if (crng_init < 2 && entropy_bits >= 128) {
+		if (crng_init < 2 && entropy_bits >= 128) {
 			crng_reseed(&primary_crng, r);
 			entropy_bits = r->entropy_count >> ENTROPY_SHIFT;
 		}
@@ -724,14 +743,14 @@ static int credit_entropy_bits_safe(struct entropy_store *r, int nbits)
 {
 	const int nbits_max = (int)(~0U >> (ENTROPY_SHIFT + 1));
 
-        if (nbits < 0)
-		return -EINVAL; 
+	if (nbits < 0)
+		return -EINVAL;
 
 	/* Cap the value to avoid overflows */
 	nbits = min(nbits,  nbits_max);
 
 	credit_entropy_bits(r, nbits);
-        return 0;
+	return 0;
 }
 
 /*********************************************************************
@@ -984,9 +1003,10 @@ void add_device_randomness(const void *buf, unsigned int size)
 	_mix_pool_bytes(&input_pool, buf, size);
 	_mix_pool_bytes(&input_pool, &time, sizeof(time));
 	spin_unlock_irqrestore(&input_pool.lock, flags);
-
 }
 EXPORT_SYMBOL(add_device_randomness);
+
+static struct timer_rand_state input_timer_state = INIT_TIMER_RAND_STATE;
 
 /*
  * This function adds entropy to the entropy "pool" by using timing
@@ -1120,7 +1140,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
 	fast_mix(fast_pool);
 	add_interrupt_bench(cycles);
 
-        if (!crng_ready()) {
+	if (!crng_ready()) {
 		if ((fast_pool->count >= 64) &&
 		    crng_fast_load((char *) fast_pool->pool,
 				   sizeof(fast_pool->pool))) {
@@ -1128,7 +1148,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
 			fast_pool->last = now;
 		}
 		return;
-	} 
+	}
 
 	if ((fast_pool->count < 64) &&
 	    !time_after(now, fast_pool->last + HZ))
@@ -1472,7 +1492,7 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
  */
 void get_random_bytes(void *buf, int nbytes)
 {
-        __u8 tmp[CHACHA20_BLOCK_SIZE];
+	__u8 tmp[CHACHA20_BLOCK_SIZE];
 
 #if DEBUG_RANDOM_BOOT > 0
 	if (!crng_ready())
@@ -1480,8 +1500,8 @@ void get_random_bytes(void *buf, int nbytes)
 		       "with crng_init = %d\n", (void *) _RET_IP_, crng_init);
 #endif
 	trace_get_random_bytes(nbytes, _RET_IP_);
-	
-        while (nbytes >= CHACHA20_BLOCK_SIZE) {
+
+	while (nbytes >= CHACHA20_BLOCK_SIZE) {
 		extract_crng(buf);
 		buf += CHACHA20_BLOCK_SIZE;
 		nbytes -= CHACHA20_BLOCK_SIZE;
@@ -1496,6 +1516,64 @@ void get_random_bytes(void *buf, int nbytes)
 	memzero_explicit(tmp, sizeof(tmp));
 }
 EXPORT_SYMBOL(get_random_bytes);
+
+/*
+ * Add a callback function that will be invoked when the nonblocking
+ * pool is initialised.
+ *
+ * returns: 0 if callback is successfully added
+ *	    -EALREADY if pool is already initialised (callback not called)
+ *	    -ENOENT if module for callback is not alive
+ */
+int add_random_ready_callback(struct random_ready_callback *rdy)
+{
+	struct module *owner;
+	unsigned long flags;
+	int err = -EALREADY;
+
+	if (crng_ready())
+		return err;
+
+	owner = rdy->owner;
+	if (!try_module_get(owner))
+		return -ENOENT;
+
+	spin_lock_irqsave(&random_ready_list_lock, flags);
+	if (crng_ready())
+		goto out;
+
+	owner = NULL;
+
+	list_add(&rdy->list, &random_ready_list);
+	err = 0;
+
+out:
+	spin_unlock_irqrestore(&random_ready_list_lock, flags);
+
+	module_put(owner);
+
+	return err;
+}
+EXPORT_SYMBOL(add_random_ready_callback);
+
+/*
+ * Delete a previously registered readiness callback function.
+ */
+void del_random_ready_callback(struct random_ready_callback *rdy)
+{
+	unsigned long flags;
+	struct module *owner = NULL;
+
+	spin_lock_irqsave(&random_ready_list_lock, flags);
+	if (!list_empty(&rdy->list)) {
+		list_del_init(&rdy->list);
+		owner = rdy->owner;
+	}
+	spin_unlock_irqrestore(&random_ready_list_lock, flags);
+
+	module_put(owner);
+}
+EXPORT_SYMBOL(del_random_ready_callback);
 
 /*
  * This function will use the architecture-specific hardware random
@@ -1518,7 +1596,7 @@ void get_random_bytes_arch(void *buf, int nbytes)
 
 		if (!arch_get_random_long(&v))
 			break;
-		
+
 		memcpy(p, &v, chunk);
 		p += chunk;
 		nbytes -= chunk;
@@ -1573,6 +1651,7 @@ static int rand_initialize(void)
 	struct crng_state *crng;
 	struct crng_state **pool;
 #endif
+
 	init_std_data(&input_pool);
 	init_std_data(&blocking_pool);
 	crng_initialize(&primary_crng);
@@ -1650,7 +1729,7 @@ random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 static ssize_t
 urandom_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 {
-        unsigned long flags;
+	unsigned long flags;
 	static int maxwarn = 10;
 	int ret;
 
@@ -1788,28 +1867,6 @@ const struct file_operations urandom_fops = {
 	.fasync = random_fasync,
 	.llseek = noop_llseek,
 };
-
-SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
-		unsigned int, flags)
-{
-	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
-		return -EINVAL;
-
-	if (count > INT_MAX)
-		count = INT_MAX;
-
-	if (flags & GRND_RANDOM)
-		return _random_read(flags & GRND_NONBLOCK, buf, count);
-
-	if (!crng_ready()) {
-		if (flags & GRND_NONBLOCK)
-			return -EAGAIN;
-		crng_wait_ready();
-		if (signal_pending(current))
-			return -ERESTARTSYS;
-	}
-	return urandom_read(NULL, buf, count, NULL);
-}
 
 /***************************************************************
  * Random UUID interface
@@ -2023,7 +2080,7 @@ unsigned long get_random_long(void)
 
 	hash = get_cpu_var(get_random_int_hash);
 
-	hash[0] += current->pid + jiffies + get_cycles();
+	hash[0] += current->pid + jiffies + random_get_entropy();
 	md5_transform(hash, random_int_secret);
 	ret = *(unsigned long *)hash;
 	put_cpu_var(get_random_int_hash);
@@ -2060,7 +2117,7 @@ void add_hwgenerator_randomness(const char *buffer, size_t count,
 {
 	struct entropy_store *poolp = &input_pool;
 
-        if (!crng_ready()) {
+	if (!crng_ready()) {
 		crng_fast_load(buffer, count);
 		return;
 	}
