@@ -372,6 +372,9 @@ on boot
     write /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy 1
     write /sys/devices/virtual/sec/sec_slow/io_is_busy 1
 
+    # set GPU values
+    write /sys/devices/platform/gpusysfs/gpu_max_clock 772
+
     # Enable Laptop Mode
     write /proc/sys/vm/laptop_mode 1
 
