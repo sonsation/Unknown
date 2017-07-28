@@ -1868,6 +1868,28 @@ const struct file_operations urandom_fops = {
 	.llseek = noop_llseek,
 };
 
+SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
+		unsigned int, flags)
+{
+	if (flags & ~(GRND_NONBLOCK|GRND_RANDOM))
+		return -EINVAL;
+
+	if (count > INT_MAX)
+		count = INT_MAX;
+
+	if (flags & GRND_RANDOM)
+		return _random_read(flags & GRND_NONBLOCK, buf, count);
+
+	if (!crng_ready()) {
+		if (flags & GRND_NONBLOCK)
+			return -EAGAIN;
+		crng_wait_ready();
+		if (signal_pending(current))
+			return -ERESTARTSYS;
+	}
+	return urandom_read(NULL, buf, count, NULL);
+}
+
 /***************************************************************
  * Random UUID interface
  *
