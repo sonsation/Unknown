@@ -1584,11 +1584,11 @@ static inline void __update_group_entity_contrib(struct sched_entity *se) {}
  * tweaking suit particular needs.
  */
 
-unsigned int hmp_up_threshold = 479;
-unsigned int hmp_down_threshold = 214;
+static unsigned int hmp_up_threshold = 479;
+static unsigned int hmp_down_threshold = 214;
 
-unsigned int hmp_semiboost_up_threshold = 400;
-unsigned int hmp_semiboost_down_threshold = 150;
+static unsigned int hmp_semiboost_up_threshold = 400;
+static unsigned int hmp_semiboost_down_threshold = 150;
 
 /* Global switch between power-aware migrations and classical GTS. */
 static unsigned int hmp_power_migration = 0;
