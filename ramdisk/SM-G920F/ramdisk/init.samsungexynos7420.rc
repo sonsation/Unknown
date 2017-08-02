@@ -381,10 +381,6 @@ on boot
     # Use more optimized nr_requests for UFS
     write /sys/block/sda/queue/nr_requests 256
     
-    # gpu min,max freq set
-    write /sys/devices/platform/gpusysfs/gpu_min_clock 160
-    write /sys/devices/platform/gpusysfs/gpu_max_clock 772
-
     # CPU Idle
     chown system system /sys/module/cpuidle_exynos64/parameters/enable_mask
 

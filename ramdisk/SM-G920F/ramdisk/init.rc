@@ -566,9 +566,6 @@ on post-fs-data
 
     mkdir /data/misc/profman 0770 system shell
 
-    #OTP
-    mkdir /data/otp 0700 system system
-	
     # NFC
     mkdir /data/nfc 0700 nfc nfc
     mkdir /data/nfc/param 0700 nfc nfc
