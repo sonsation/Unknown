@@ -38,8 +38,8 @@
 #include <linux/of_gpio.h>
 #include <linux/irq.h>
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
 #endif
 
 #include <mach/regs-clock.h>
@@ -1857,19 +1857,20 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 	case FB_BLANK_NORMAL:
 		DISP_SS_EVENT_LOG(DISP_EVT_BLANK, &decon->sd, ktime_set(0, 0));
 		ret = decon_disable(decon);
-#ifdef CONFIG_POWERSUSPEND
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
+#ifdef CONFIG_STATE_NOTIFIER
+		state_suspend();
 #endif
 		if (ret) {
 			decon_err("failed to disable decon\n");
 			goto blank_exit;
 		}
+
 		break;
 	case FB_BLANK_UNBLANK:
 		DISP_SS_EVENT_LOG(DISP_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
 		ret = decon_enable(decon);
-#ifdef CONFIG_POWERSUSPEND
-		set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
 #endif
 		if (ret) {
 			decon_err("failed to enable decon\n");
