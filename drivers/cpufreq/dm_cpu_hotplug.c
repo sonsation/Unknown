@@ -557,7 +557,7 @@ static int __ref __cpu_hotplug(bool out_flag, enum hotplug_cmd cmd)
 				}
 			} else {
 				if (cluster0_hotplug_in)
-					hotplug_out_limit = NR_CLUST0_CPUS - 2;
+					hotplug_out_limit = NR_CLUST0_CPUS - 3;
 
 				for (i = setup_max_cpus - 1; i > hotplug_out_limit; i--) {
 					if (cpu_online(i)) {
@@ -585,7 +585,7 @@ static int __ref __cpu_hotplug(bool out_flag, enum hotplug_cmd cmd)
 			}
 		} else {
 			if (cmd == CMD_CLUST0_ONE_IN) {
-				for (i = 1; i < NR_CLUST0_CPUS - 1; i++) {
+				for (i = 1; i < NR_CLUST0_CPUS - 2; i++) {
 					if (!cpu_online(i)) {
 						ret = cpu_up(i);
 						if (ret)
@@ -833,7 +833,6 @@ static int __ref exynos_dm_hotplug_notifier(struct notifier_block *notifier,
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		mutex_lock(&thread_lock);
-
 		in_suspend_prepared = true;
 
 		exynos_dm_hotplug_disable();
