@@ -24,12 +24,17 @@
 #include <linux/platform_device.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
+#include <linux/wakelock.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
+#include <mach/cpufreq.h>
 
 #include <linux/sec_sysfs.h>
 #ifdef CONFIG_SEC_DEBUG
@@ -82,6 +87,24 @@ struct gpio_keys_drvdata {
 	struct mutex disable_lock;
 	struct gpio_button_data data[0];
 };
+
+static void sync_system(struct work_struct *work);
+static DECLARE_WORK(sync_system_work, sync_system);
+struct wake_lock sync_wake_lock;
+
+static bool suspended = false;
+
+static void sync_system(struct work_struct *work)
+{
+	if (suspended)
+		msleep(5000);
+
+	pr_info("%s +\n", __func__);
+	wake_lock(&sync_wake_lock);
+	emergency_sync();
+	wake_unlock(&sync_wake_lock);
+	pr_info("%s -\n", __func__);
+}
 
 /*
  * SYSFS interface for enabling/disabling keys and switches:
@@ -398,6 +421,25 @@ static ssize_t key_pressed_show_code(struct device *dev,
 	return strlen(buf);
 }
 
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	switch (event) {
+		case STATE_NOTIFIER_SUSPEND:
+			suspended = true;
+			break;
+		default:
+                        suspended = false;
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block compact_notifier_block = {
+	.notifier_call = state_notifier_callback,
+};
+
 /* the volume keys can be the wakeup keys in special case */
 static ssize_t wakeup_enable(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -454,8 +496,10 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value_cansleep(button->gpio) ? 1 : 0) ^ button->active_low;
 
-	if ((button->code == KEY_POWER) && !!state) {
-		printk(KERN_INFO "PWR key is pressed\n");
+	if (button->code == KEY_POWER) {
+		if (!!state) {
+			printk(KERN_INFO "PWR key is pressed\n");
+		}
 	}
 
 	if ((button->code == KEY_HOMEPAGE) && !!state) {
@@ -476,6 +520,14 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 
 	input_sync(input);
 
+        if (((button->code == KEY_POWER) || (button->code == KEY_HOMEPAGE))
+	    && !!state) {
+		event_hotplug_in();
+	}
+
+        if (button->code == KEY_POWER) {
+		schedule_work_on(0, &sync_system_work);
+	}
 #ifdef CONFIG_INPUT_BOOSTER
 	if (button->code == KEY_HOMEPAGE)
 		input_booster_send_event(BOOSTER_DEVICE_KEY, !!state);
@@ -1099,6 +1151,9 @@ static struct platform_driver gpio_keys_device_driver = {
 
 static int __init gpio_keys_init(void)
 {
+        state_register_client(&compact_notifier_block);
+        wake_lock_init(&sync_wake_lock, WAKE_LOCK_SUSPEND,
+		"sync_wake_lock");
 	return platform_driver_register(&gpio_keys_device_driver);
 }
 
