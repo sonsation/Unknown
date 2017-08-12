@@ -1639,9 +1639,8 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 		fp->hdr.type = BINDER_TYPE_HANDLE;
 	else
 		fp->hdr.type = BINDER_TYPE_WEAK_HANDLE;
-	fp->binder = 0;
+
 	fp->handle = ref->desc;
-	fp->cookie = 0;
 	binder_inc_ref(ref, fp->hdr.type == BINDER_TYPE_HANDLE, &thread->todo);
 
 	trace_binder_transaction_node_to_ref(t, node, ref);
@@ -1692,9 +1691,7 @@ static int binder_translate_handle(struct flat_binder_object *fp,
 		if (!new_ref)
 			return -EINVAL;
 
-		fp->binder = 0;
 		fp->handle = new_ref->desc;
-		fp->cookie = 0;
 		binder_inc_ref(new_ref, fp->hdr.type == BINDER_TYPE_HANDLE,
 			       NULL);
 		trace_binder_transaction_ref_to_ref(t, ref, new_ref);
@@ -2288,7 +2285,7 @@ err_no_context_mgr_node:
 		thread->return_error = return_error;
 }
 
-int binder_thread_write(struct binder_proc *proc, struct binder_thread *thread,
+static int binder_thread_write(struct binder_proc *proc, struct binder_thread *thread,
 			binder_uintptr_t binder_buffer, size_t size,
 			binder_size_t *consumed)
 {
