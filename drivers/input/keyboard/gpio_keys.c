@@ -31,9 +31,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
-#ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#endif
 #include <mach/cpufreq.h>
 
 #include <linux/sec_sysfs.h>
@@ -62,10 +60,6 @@ bool wakeup_by_key(void) {
 	return false;
 }
 EXPORT_SYMBOL(wakeup_by_key);
-
-#if defined(CONFIG_FB) && defined(CONFIG_SENSORS_VFS7XXX)
-extern void vfsspi_fp_homekey_ev(void);
-#endif
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -436,7 +430,7 @@ static int state_notifier_callback(struct notifier_block *this,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block compact_notifier_block = {
+static struct notifier_block gpio_notifier_block = {
 	.notifier_call = state_notifier_callback,
 };
 
@@ -512,10 +506,6 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	} else {
 		bdata->key_state = !!state;
 		input_event(input, type, button->code, !!state);
-#if defined(CONFIG_FB) && defined(CONFIG_SENSORS_VFS7XXX)
-		if(button->code == KEY_HOMEPAGE && !!state == 1)
-			vfsspi_fp_homekey_ev();
-#endif
 	}
 
 	input_sync(input);
@@ -1151,7 +1141,7 @@ static struct platform_driver gpio_keys_device_driver = {
 
 static int __init gpio_keys_init(void)
 {
-        state_register_client(&compact_notifier_block);
+        state_register_client(&gpio_notifier_block);
         wake_lock_init(&sync_wake_lock, WAKE_LOCK_SUSPEND,
 		"sync_wake_lock");
 	return platform_driver_register(&gpio_keys_device_driver);
