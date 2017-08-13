@@ -340,7 +340,7 @@ setxattr(struct dentry *d, const char __user *name, const void __user *value,
 			return -E2BIG;
 		kvalue = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
 		if (!kvalue) {
-			kvalue = vmalloc(size);
+			kvalue = vzalloc(size);
 			if (!kvalue)
 				return -ENOMEM;
 		}
