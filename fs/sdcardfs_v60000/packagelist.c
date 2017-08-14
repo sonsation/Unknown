@@ -108,19 +108,6 @@ int check_caller_access_to_name(struct inode *parent_node, const char* name) {
 	return 1;
 }
 
-/* This function is used when file opening. The open flags must be
- * checked before calling check_caller_access_to_name() */  
-int open_flags_to_access_mode(int open_flags) {
-	if((open_flags & O_ACCMODE) == O_RDONLY) {
-		return 0; /* R_OK */
-	} else if ((open_flags & O_ACCMODE) == O_WRONLY) {
-		return 1; /* W_OK */
-	} else {
-		/* Probably O_RDRW, but treat as default to be safe */
-		return 1; /* R_OK | W_OK */
-	}
-}
-
 static int insert_str_to_int(struct packagelist_data *pkgl_dat, void *key, int value) {
 	struct hashtable_entry *hash_cur;
 	struct hashtable_entry *new_entry;

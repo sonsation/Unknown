@@ -421,7 +421,6 @@ static inline void sdcardfs_put_real_lower(const struct dentry *dent,
 /* for packagelist.c */
 extern appid_t get_appid(void *pkgl_id, const char *app_name);
 extern int check_caller_access_to_name(struct inode *parent_node, const char* name);
-extern int open_flags_to_access_mode(int open_flags);
 extern void *packagelist_create(void);
 extern void packagelist_destroy(void *pkgl_id);
 extern int packagelist_init(void);
