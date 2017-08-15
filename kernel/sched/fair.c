@@ -1587,11 +1587,11 @@ static inline void __update_group_entity_contrib(struct sched_entity *se) {}
 static unsigned int hmp_up_threshold = 479;
 static unsigned int hmp_down_threshold = 214;
 
-static unsigned int hmp_semiboost_up_threshold = 400;
+static unsigned int hmp_semiboost_up_threshold = 479;
 static unsigned int hmp_semiboost_down_threshold = 150;
 
 /* Global switch between power-aware migrations and classical GTS. */
-static unsigned int hmp_power_migration = 0;
+static unsigned int hmp_power_migration = 1;
 
 /* Performance threshold for guaranteeing an up migration. */
 static unsigned int hmp_up_perf_threshold = 597;
@@ -1601,10 +1601,9 @@ static unsigned int hmp_up_power_threshold = 341;
 
 /*
  * Maximum total capacity difference in load scale percentage to enact scheduler power migration.
- * 
  */
-#define UP_PERF_HYS_DEF		SCHED_LOAD_SCALE * 0.05
-#define DOWN_PERF_HYS_DEF	SCHED_LOAD_SCALE * 0.10
+#define UP_PERF_HYS_DEF SCHED_LOAD_SCALE * 0.05
+#define DOWN_PERF_HYS_DEF SCHED_LOAD_SCALE * 0.10
 static unsigned int hmp_up_perf_hysteresis = UP_PERF_HYS_DEF;
 static unsigned int hmp_down_perf_hysteresis = DOWN_PERF_HYS_DEF;
 
@@ -1648,8 +1647,7 @@ void sched_update_cpu_efficiency_table(struct cpu_cluster_efficiency *ceff,
 	int i, min, max, range, step;
 #ifdef DEBUG
 	int p;
-#endif
-	
+#endif	
 	cpu_efficiency_table[cluster] = *ceff;
 	
 	min = ceff->p_states[0].capacity;
@@ -2024,7 +2022,7 @@ static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 			}
 
 			trace_sched_stat_blocked(tsk, delta);
-                        trace_sched_blocked_reason(tsk);
+			trace_sched_blocked_reason(tsk);
 
 			/*
 			 * Blocking time is in units of nanosecs, so shift by
@@ -2055,19 +2053,6 @@ static void check_spread(struct cfs_rq *cfs_rq, struct sched_entity *se)
 #endif
 }
 
-static unsigned int Lgentle_fair_sleepers = 0;
-static unsigned int Larch_power = 1;
-
-void relay_gfs(unsigned int gfs)
-{
-	Lgentle_fair_sleepers = gfs;
-}
-
-void relay_ap(unsigned int ap)
-{
-	Larch_power = ap;
-}
-
 static void
 place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 {
@@ -2090,7 +2075,7 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 		 * Halve their sleep time's effect, to allow
 		 * for a gentler effect of sleepers:
 		 */
-		if (Lgentle_fair_sleepers)
+		if (sched_feat(GENTLE_FAIR_SLEEPERS))
 			thresh >>= 1;
 
 		vruntime -= thresh;
@@ -3404,7 +3389,7 @@ static void task_waking_fair(struct task_struct *p)
 #endif
 
 	se->vruntime -= min_vruntime;
-        record_wakee(p);
+	record_wakee(p);
 }
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -3553,7 +3538,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p, int sync)
 	unsigned long weight;
 	int balanced;
 
-        /*
+	/*
 	 * If we wake multiple tasks be careful to not bounce
 	 * ourselves around too much.
 	 */
@@ -3606,17 +3591,15 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p, int sync)
 		balanced = this_eff_load <= prev_eff_load;
 	} else
 		balanced = true;
-
 	schedstat_inc(p, se.statistics.nr_wakeups_affine_attempts);
 
 	if (!balanced)
 		return 0;
 
-        schedstat_inc(sd, ttwu_move_affine);
+	schedstat_inc(sd, ttwu_move_affine);
 	schedstat_inc(p, se.statistics.nr_wakeups_affine);
 
 	return 1;
-
 }
 
 /*
@@ -4053,7 +4036,7 @@ static inline unsigned int hmp_best_little_cpu(struct task_struct *tsk,
 	struct sched_avg *avg;
 	struct cpumask allowed_hmp_cpus;
 
-	if(!hmp_packing_enabled ||
+	if (!hmp_packing_enabled ||
 			tsk->se.avg.load_avg_ratio > ((NICE_0_LOAD * 90)/100))
 		return hmp_select_slower_cpu(tsk, cpu);
 
@@ -4514,7 +4497,7 @@ static int hmp_packing_limit_from_sysfs(int value)
 {
 	if (value < 0)
 		return -1;
-
+	
 	hmp_full_threshold = value;
 	
 	return 0;
@@ -5850,7 +5833,7 @@ static void update_cpu_power(struct sched_domain *sd, int cpu)
 	struct sched_group *sdg = sd->groups;
 
 	if ((sd->flags & SD_SHARE_CPUPOWER) && weight > 1) {
-		if (Larch_power)
+		if (sched_feat(ARCH_POWER))
 			power *= arch_scale_smt_power(sd, cpu);
 		else
 			power *= default_scale_smt_power(sd, cpu);
@@ -5860,7 +5843,7 @@ static void update_cpu_power(struct sched_domain *sd, int cpu)
 
 	sdg->sgp->power_orig = power;
 
-	if (Larch_power)
+	if (sched_feat(ARCH_POWER))
 		power *= arch_scale_freq_power(sd, cpu);
 	else
 		power *= default_scale_freq_power(sd, cpu);
@@ -7537,7 +7520,7 @@ static int hmp_active_task_migration_cpu_stop(void *data)
 
 	raw_spin_lock_irq(&busiest_rq->lock);
 
-	if (p->exit_state)
+        if (p->exit_state)
 		goto out_unlock;
 
 	/* make sure the requested cpu hasn't gone down in the meantime */
@@ -7618,9 +7601,9 @@ static int hmp_idle_pull_cpu_stop(void *data)
 
 	raw_spin_lock_irq(&busiest_rq->lock);
 
-	if (p->exit_state)
+        if (p->exit_state)
 		goto out_unlock;
-
+ 
 	/* make sure the requested cpu hasn't gone down in the meantime */
 	if (unlikely(busiest_cpu != smp_processor_id() ||
 				!busiest_rq->active_balance)) {
@@ -7823,12 +7806,12 @@ static unsigned int hmp_idle_pull(int this_cpu)
 
 		if (hmp_boost() || curr->avg.load_avg_ratio > up_threshold)
 			if (curr->avg.load_avg_ratio > ratio) {
-				if (p)
+                                if (p)
 					put_task_struct(p);
 				p = task_of(curr);
 				target = rq;
 				ratio = curr->avg.load_avg_ratio;
-				get_task_struct(p);
+                                get_task_struct(p);
 			}
 		raw_spin_unlock_irqrestore(&rq->lock, flags);
 	}
@@ -7846,7 +7829,7 @@ static unsigned int hmp_idle_pull(int this_cpu)
 		trace_sched_hmp_migrate(p, target->push_cpu,
 			HMP_MIGRATE_IDLE_PULL);
 		hmp_next_up_delay(&p->se, target->push_cpu);
-	} else {
+        } else {
 		put_task_struct(p);
 	}
 	raw_spin_unlock_irqrestore(&target->lock, flags);
