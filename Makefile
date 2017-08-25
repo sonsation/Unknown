@@ -321,8 +321,6 @@ MAKEFLAGS += --include-dir=$(srctree)
 $(srctree)/scripts/Kbuild.include: ;
 include $(srctree)/scripts/Kbuild.include
 
-GRAPHITE = -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -floop-flatten -floop-nest-optimize -fgraphite
-
 # Make variables (CC, etc...)
 
 AS		= $(CROSS_COMPILE)as
@@ -354,11 +352,11 @@ endif
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 		  
-CFLAGS_MODULE   = $(GRAPHITE)  
-AFLAGS_MODULE   = $(GRAPHITE)
-LDFLAGS_MODULE  = $(GRAPHITE) --strip-debug
-CFLAGS_KERNEL	= $(GRAPHITE) -fsingle-precision-constant
-AFLAGS_KERNEL	= $(GRAPHITE)
+CFLAGS_MODULE   =  
+AFLAGS_MODULE   =
+LDFLAGS_MODULE  =
+CFLAGS_KERNEL	=
+AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
 
@@ -381,26 +379,35 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -DNDEBUG $(GRAPHITE) \
-			-fdiagnostics-show-option \
-			-finline-functions \
-			-fno-common \
-			-fno-delete-null-pointer-checks \
-			-fno-strict-aliasing \
-			-fpredictive-commoning \
-			-march=armv8-a+crc \
-			-mtune=cortex-a57.cortex-a53 \
-			-std=gnu89 \
-			-pipe \
-			-Wall \
-			-Werror \
-			-Werror-implicit-function-declaration \
-			-Wno-format-security \
-			-Wno-trigraphs \
-			-Wstrict-prototypes \
-			-Wundef \
-                        -w \
-                        -fno-pic 
+KBUILD_GRAPHITE := \
+	-fgraphite \
+	-fgraphite-identity \
+	-floop-block \
+	-floop-flatten \
+	-floop-interchange \
+	-floop-nest-optimize \
+	-floop-parallelize-all \
+	-floop-strip-mine \
+	-ftree-loop-linear
+
+KBUILD_CFLAGS := \
+	-fdiagnostics-show-option \
+	-fno-common \
+	-fno-delete-null-pointer-checks \
+	-fno-strict-aliasing \
+	-march=armv8-a+crc \
+	-mtune=cortex-a57.cortex-a53 \
+	-Ofast \
+	-std=gnu89 \
+	-Wall \
+	-Werror \
+	-Wno-format-security \
+	-Wno-maybe-uninitialized \
+	-Wno-trigraphs \
+	-Wstrict-prototypes \
+	-Wundef \
+        -w
+#	$(KBUILD_GRAPHITE)
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
