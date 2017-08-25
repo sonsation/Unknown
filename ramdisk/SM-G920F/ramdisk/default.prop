@@ -1,7 +1,6 @@
 #
 # ADDITIONAL_DEFAULT_PROPERTIES
 #
-telephony.lteOnCdmaDevice=0
 persist.security.ams.enforcing=0
 ro.oem_unlock_supported=1
 ro.secure=0
@@ -30,15 +29,6 @@ dalvik.vm.usejit=true
 dalvik.vm.usejitprofiles=true
 dalvik.vm.appimageformat=lz4
 debug.atrace.tags.enableflags=0
-
-#T-Mobile
-persist.eons.enabled=true
-
-#DS
-rild.libpath=/system/lib64/libsec-ril.so
-rild.libpath2=/system/lib64/libsec-ril-dsds.so
-ro.multisim.simslotcount=1
-
 #
 # BOOTIMAGE_BUILD_PROPERTIES
 #
@@ -49,3 +39,10 @@ ro.bootimage.build.fingerprint=samsung/zerofltexx/zeroflte:7.0/NRD90M/G920FXXS5E
 # Screen mirroring / AllShare Cast fix
 wlan.wfd.hdcp=disable
 ro.securestorage.support=false
+
+# for power saving
+pm.sleep_mode 1
+ro.ril.disable.power.collapse 0
+power.saving.mode 1
+ro.config.hw_power_saving 1
+persist.radio.add_power_save 1
