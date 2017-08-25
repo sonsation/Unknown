@@ -357,22 +357,13 @@ on boot
     chown system system /sys/devices/system/cpu/cpu6/online
     chown system system /sys/devices/system/cpu/cpu7/online
 
-    write /sys/devices/system/cpu/cpu1/online 1
-    write /sys/devices/system/cpu/cpu2/online 1
-    write /sys/devices/system/cpu/cpu3/online 1
-    write /sys/devices/system/cpu/cpu4/online 1
-    write /sys/devices/system/cpu/cpu5/online 1
-    write /sys/devices/system/cpu/cpu6/online 1
-    write /sys/devices/system/cpu/cpu7/online 1
-
     # GENTLE FAIR SLEEPERS
-    write /sys/kernel/sched/gentle_fair_sleepers 1
+    write /sys/kernel/sched/gentle_fair_sleepers 0
 
     # ARCH POWER
-    write /sys/kernel/sched/arch_power 1
+    write /sys/kernel/sched/arch_power 0
 
     # VM
-    write /proc/sys/vm/swappiness 130
     write /proc/sys/vm/laptop_mode 1
     write /proc/sys/vm/dirty_expire_centisecs 500
     write /proc/sys/vm/dirty_writeback_centisecs 1000
@@ -871,6 +862,12 @@ on property:persist.sys.storage_preload=1
 
 on property:persist.sys.storage_preload=0
     start umount_service
+
+# AIR
+service visiond /system/bin/visiond
+    class main
+    user system
+    group system camera media media_rw
 
 # SSWAP
 service swapon /sbin/sswap -s -f 2048
