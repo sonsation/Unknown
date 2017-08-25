@@ -812,7 +812,7 @@ static bool sec_bat_ovp_uvlo_result(
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
 			   when over-voltage status is detected	 */
-			wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+			wake_lock_timeout(&battery->vbus_wake_lock, 1000);
 			break;
 		}
 		power_supply_changed(&battery->psy_bat);
@@ -2520,7 +2520,7 @@ static void sec_bat_do_fullcharged(
 	 * activated wake lock in a few seconds
 	 */
 	if (battery->pdata->polling_type == SEC_BATTERY_MONITOR_ALARM)
-		wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+		wake_lock_timeout(&battery->vbus_wake_lock, 1000);
 }
 
 static bool sec_bat_fullcharged_check(
@@ -2914,11 +2914,11 @@ static void sec_bat_set_polling(
 		if (battery->pdata->monitor_initial_count) {
 			battery->pdata->monitor_initial_count--;
 			queue_delayed_work(system_power_efficient_wq,
-				&battery->polling_work, HZ);
+				&battery->polling_work, 100);
 		} else
 		queue_delayed_work(system_power_efficient_wq,
 				&battery->polling_work,
-				polling_time_temp * HZ);
+				polling_time_temp * 100);
 		break;
 	case SEC_BATTERY_MONITOR_ALARM:
 #if defined(ANDROID_ALARM_ACTIVATED)
@@ -3167,7 +3167,7 @@ static void sec_bat_fw_update_work(struct sec_battery_info *battery, int mode)
 
 	dev_info(battery->dev, "%s \n", __func__);
 
-	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+	wake_lock_timeout(&battery->vbus_wake_lock, 1000);
 
 	switch (mode) {
 		case SEC_WIRELESS_RX_SDCARD_MODE:
@@ -3466,7 +3466,7 @@ skip_monitor:
 	sec_bat_set_polling(battery);
 
 	if (battery->capacity <= 0 || battery->health_change)
-		wake_lock_timeout(&battery->monitor_wake_lock, HZ * 5);
+		wake_lock_timeout(&battery->monitor_wake_lock, 500);
 	else
 		wake_unlock(&battery->monitor_wake_lock);
 
@@ -3598,7 +3598,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 * if cable is connected and disconnected,
 	 * activated wake lock in a few seconds
 	 */
-	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
+	wake_lock_timeout(&battery->vbus_wake_lock, 1000);
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &

@@ -146,7 +146,7 @@ static irqreturn_t sec_nfc_irq_thread_fn(int irq, void *dev_id)
 	mutex_unlock(&info->i2c_info.read_mutex);
 
 	wake_up_interruptible(&info->i2c_info.read_wait);
-	wake_lock_timeout(&info->nfc_wake_lock, 2*HZ);
+	wake_lock_timeout(&info->nfc_wake_lock, 200);
 
 	return IRQ_HANDLED;
 }
