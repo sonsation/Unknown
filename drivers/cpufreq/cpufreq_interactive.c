@@ -25,7 +25,6 @@
 #include <linux/rwsem.h>
 #include <linux/sched.h>
 #include <linux/sched/rt.h>
-#include <linux/state_notifier.h>
 #include <linux/tick.h>
 #include <linux/time.h>
 #include <linux/timer.h>
@@ -34,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <linux/pm_qos.h>
+#include <linux/powersuspend.h>
 #include <asm/cputime.h>
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
@@ -2697,25 +2697,23 @@ static struct notifier_block cpufreq_interactive_cluster0_max_qos_notifier = {
 #endif
 #endif
 
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
+static void interactive_early_suspend(struct power_suspend *handler)
 {
-	switch (event) {
-		case STATE_NOTIFIER_SUSPEND:
-			suspended = true;
-			break;
-		case STATE_NOTIFIER_ACTIVE:
-                        suspended = false;
-			break;
-                default :
-                        break;
-	}
+	suspended = true;
 
-	return NOTIFY_OK;
+	return;
 }
 
-static struct notifier_block interactive_notifier_block = {
-	.notifier_call = state_notifier_callback,
+static void interactive_late_resume(struct power_suspend *handler)
+{
+	suspended = false;
+
+	return;
+}
+
+static struct power_suspend interactive_suspend = {
+	.suspend = interactive_early_suspend,
+	.resume = interactive_late_resume,
 };
 
 static int __init cpufreq_interactive_init(void)
@@ -2736,7 +2734,7 @@ static int __init cpufreq_interactive_init(void)
 		init_rwsem(&pcpu->enable_sem);
 	}
 
-	state_register_client(&interactive_notifier_block);
+	register_power_suspend(&interactive_suspend);
 
 	spin_lock_init(&speedchange_cpumask_lock);
 #ifdef CONFIG_PMU_COREMEM_RATIO
