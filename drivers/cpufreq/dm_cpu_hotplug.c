@@ -10,7 +10,7 @@
 #include <linux/tick.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
-#include <linux/state_notifier.h>
+#include <linux/fb.h>
 #include <linux/pm_qos.h>
 #include <linux/delay.h>
 #include <linux/kthread.h>
@@ -428,12 +428,27 @@ static void thread_manage_work(struct work_struct *work)
 static DECLARE_WORK(manage_work, thread_manage_work);
 #endif
 
-static int state_notifier_callback(struct notifier_block *this,
-		unsigned long event, void *data)
+static int fb_state_change(struct notifier_block *nb,
+		unsigned long val, void *data)
 {
+	struct fb_event *evdata = data;
+	struct fb_info *info = evdata->info;
+	unsigned int blank;
 
-	switch (event) {
-	case STATE_NOTIFIER_SUSPEND:
+	if (val != FB_EVENT_BLANK &&
+		val != FB_R_EARLY_EVENT_BLANK)
+		return 0;
+	/*
+	 * If FBNODE is not zero, it is not primary display(LCD)
+	 * and don't need to process these scheduling.
+	 */
+	if (info->node)
+		return NOTIFY_OK;
+
+	blank = *(int *)evdata->data;
+
+	switch (blank) {
+	case FB_BLANK_POWERDOWN:
 		lcd_is_on = false;
 		pr_info("LCD is off\n");
 
@@ -448,7 +463,7 @@ static int state_notifier_callback(struct notifier_block *this,
 		}
 #endif
 		break;
-	case STATE_NOTIFIER_ACTIVE:
+	case FB_BLANK_UNBLANK:
 		/*
 		 * LCD blank CPU qos is set by exynos-ikcs-cpufreq
 		 * This line of code release max limit when LCD is
@@ -475,8 +490,8 @@ static int state_notifier_callback(struct notifier_block *this,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block state_notifier_block = {
-	.notifier_call = state_notifier_callback,
+static struct notifier_block fb_block = {
+	.notifier_call = fb_state_change,
 };
 
 #if defined(CONFIG_SENSORS_FP_LOCKSCREEN_MODE)
@@ -1220,7 +1235,7 @@ static int __init dm_cpu_hotplug_init(void)
 	}
 #endif
 
-	state_register_client(&state_notifier_block);
+	fb_register_client(&fb_block);
 
 #ifdef CONFIG_PM
 	ret = sysfs_create_file(power_kobj, &enable_dm_hotplug.attr);
@@ -1336,7 +1351,7 @@ err_cluster0_core_hotplug_in:
 	sysfs_remove_file(power_kobj, &enable_dm_hotplug.attr);
 err_enable_dm_hotplug:
 #endif
-	state_unregister_client(&state_notifier_block);
+	fb_unregister_client(&fb_block);
 #ifndef CONFIG_HOTPLUG_THREAD_STOP
 	kthread_stop(dm_hotplug_task);
 #endif
