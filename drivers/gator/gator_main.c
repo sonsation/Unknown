@@ -749,7 +749,7 @@ static void gator_emit_perf_time(u64 time)
 /******************************************************************************
  * cpu hotplug and pm notifiers
  ******************************************************************************/
-static int gator_hotcpu_notify(struct notifier_block *self, unsigned long action, void *hcpu)
+static int __cpuinit gator_hotcpu_notify(struct notifier_block *self, unsigned long action, void *hcpu)
 {
 	int cpu = lcpu_to_pcpu((long)hcpu);
 

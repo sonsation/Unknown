@@ -2186,7 +2186,7 @@ static struct notifier_block cpufreq_interextrem_idle_nb = {
 };
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
-static int exynos_pmu_cpu_notifier(struct notifier_block *nfb,
+static int __cpuinit exynos_pmu_cpu_notifier(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
 	int cpu = (unsigned long)hcpu;
@@ -2203,7 +2203,7 @@ static int exynos_pmu_cpu_notifier(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block exynos_pmu_cpu_notifier_block = {
+static struct notifier_block __cpuinitdata exynos_pmu_cpu_notifier_block = {
 	.notifier_call = exynos_pmu_cpu_notifier,
 };
 #endif
