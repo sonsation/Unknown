@@ -23,7 +23,13 @@ KBUILD_CFLAGS	+= -mgeneral-regs-only
 KBUILD_CFLAGS	+= -fno-pic
 
 ifeq ($(CONFIG_CC_STACKPROTECTOR),y)
-KBUILD_CFLAGS	+=-fstack-protector-all
+  KBUILD_CFLAGS	+= -fstack-protector
+endif
+ifeq ($(CONFIG_CC_STACKPROTECTOR_STRONG),y)
+  KBUILD_CFLAGS	+= -fstack-protector-strong
+endif
+ifeq ($(CONFIG_CC_STACKPROTECTOR_ALL),y)
+  KBUILD_CFLAGS	+= -fstack-protector-all
 endif
 
 ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
