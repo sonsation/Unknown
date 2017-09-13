@@ -382,22 +382,27 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_GRAPHITE := \
 	-fgraphite \
 	-fgraphite-identity \
-	-floop-block \
 	-floop-flatten \
-	-floop-interchange \
-	-floop-nest-optimize \
 	-floop-parallelize-all \
+        -ftree-loop-linear \
+	-floop-interchange \
 	-floop-strip-mine \
-	-ftree-loop-linear
+	-floop-block \
+	-floop-nest-optimize
 
 KBUILD_CFLAGS := \
 	-fdiagnostics-show-option \
+        -ffast-math \
 	-fno-common \
 	-fno-delete-null-pointer-checks \
 	-fno-strict-aliasing \
+        -ftree-vectorize \
+	-g0 \
 	-march=armv8-a+crc \
+        -mcpu=cortex-a57.cortex-a53+crypto+crc \
 	-mtune=cortex-a57.cortex-a53 \
 	-Ofast \
+        -pipe \ 
 	-std=gnu89 \
 	-Wall \
 	-Werror \
@@ -406,8 +411,8 @@ KBUILD_CFLAGS := \
 	-Wno-trigraphs \
 	-Wstrict-prototypes \
 	-Wundef \
-        -w
-#	$(KBUILD_GRAPHITE)
+        -w \
+	$(KBUILD_GRAPHITE)
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
