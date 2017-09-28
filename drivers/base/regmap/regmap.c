@@ -1611,7 +1611,7 @@ int regmap_raw_read(struct regmap *map, unsigned int reg, void *val,
 			if (ret != 0)
 				goto out;
 
-			map->format.format_val(val + (i * val_bytes), v, 0);
+			memcpy(val + (i * val_bytes), &ival, val_bytes);
 		}
 	}
 
