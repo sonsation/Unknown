@@ -999,14 +999,6 @@ static void exynos_ss_dump_task_info(void)
 				}
 			}
 		}
-
-#ifdef CONFIG_EXYNOS_DUMP_TASK_INFO_ONCE
-		// only print one task to make sure last_kmsg
-		// isn't being flooded which keeps important informations
-		// disappearing because last_kmsg-buffer size is limited
-		break;
-#endif
-
 	}
 	pr_info(" ----------------------------------------------------------------------------------------------------------------------------\n");
 }
