@@ -847,7 +847,7 @@ struct decon_device {
 	dma_addr_t vgr0_cb_addr;
 	dma_addr_t vgr1_cb_addr;
 
-	bool	int_fifo_status;
+	bool int_fifo_status;
 
 #ifdef CONFIG_FB_DSU
 	int need_DSU_update;

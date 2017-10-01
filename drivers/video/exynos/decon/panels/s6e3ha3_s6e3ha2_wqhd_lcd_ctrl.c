@@ -3096,44 +3096,15 @@ probe_exit:
 
 static int s6e3hf3_wqhd_displayon(struct dsim_device *dsim)
 {
-	int ret = 0;
-#ifdef CONFIG_LCD_ALPM
-	struct panel_private *panel = &dsim->priv;
-#endif
+	int     ret = 0;
 
 	dsim_info("MDD : %s was called\n", __func__);
 
-#ifdef CONFIG_LCD_ALPM
-	if (panel->current_alpm && panel->alpm) {
-		 dsim_info("%s : ALPM mode\n", __func__);
-	} else if (panel->current_alpm) {
-		ret = alpm_set_mode(dsim, ALPM_OFF);
-		if (ret) {
-			dsim_err("failed to exit alpm.\n");
-			goto displayon_err;
-		}
-	} else {
-		if (panel->alpm) {
-			ret = alpm_set_mode(dsim, ALPM_ON);
-			if (ret) {
-				dsim_err("failed to initialize alpm.\n");
-				goto displayon_err;
-			}
-		} else {
-			ret = dsim_write_hl_data(dsim, SEQ_DISPLAY_ON, ARRAY_SIZE(SEQ_DISPLAY_ON));
-			if (ret < 0) {
-				dsim_err("%s : fail to write CMD : DISPLAY_ON\n", __func__);
-				goto displayon_err;
-			}
-		}
-	}
-#else
 	ret = dsim_write_hl_data(dsim, SEQ_DISPLAY_ON, ARRAY_SIZE(SEQ_DISPLAY_ON));
 	if (ret < 0) {
 		dsim_err("%s : fail to write CMD : DISPLAY_ON\n", __func__);
 		goto displayon_err;
 	}
-#endif
 
 displayon_err:
 	return ret;

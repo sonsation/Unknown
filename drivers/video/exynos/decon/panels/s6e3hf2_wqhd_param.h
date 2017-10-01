@@ -428,6 +428,10 @@ static const unsigned char SEQ_40NIT_MODE_ON[] = {
 	0x53, 0x02
 };
 
+static const unsigned char SEQ_NORMAL_MODE_ON[] = {
+	0x53, 0x00
+};
+
 static const unsigned char SEQ_HMT_OFF1[] = {	/* aid */
 	0xB2,
 	0xA5, 0x30, 0x04, 0x10, 0x10, 0x40

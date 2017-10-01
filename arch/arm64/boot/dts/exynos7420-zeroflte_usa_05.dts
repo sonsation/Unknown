@@ -646,6 +646,12 @@
 		};
 	};
 
+	hsi2c@13670000 {
+		max77838@60 {
+			status = "disabled";
+		};
+	};
+
 	muic {
 		status = "disabled";
 		muic,support-list = "OTG","Charging Cable","Jig USB On","Jig UART Off",
@@ -658,12 +664,6 @@
 				"Fuelgauge test","HMT","USB LANHUB";
 		muic,afcmode-tx = /bits/ 8 <0x46>;
 		muic,qc-hv = /bits/ 8 <0x9>;
-	};
-
-	hsi2c@13670000 {
-		max77838@60 {
-			status = "disabled";
-		};
 	};
 
 	hsi2c@13680000 {
