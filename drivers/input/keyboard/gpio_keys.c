@@ -11,6 +11,7 @@
 
 #include <linux/module.h>
 
+#include <linux/powersuspend.h>
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
@@ -31,7 +32,6 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
-#include <linux/state_notifier.h>
 #include <mach/cpufreq.h>
 
 #include <linux/sec_sysfs.h>
@@ -415,25 +415,6 @@ static ssize_t key_pressed_show_code(struct device *dev,
 	return strlen(buf);
 }
 
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	switch (event) {
-		case STATE_NOTIFIER_SUSPEND:
-			suspended = true;
-			break;
-		default:
-                        suspended = false;
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block gpio_notifier_block = {
-	.notifier_call = state_notifier_callback,
-};
-
 /* the volume keys can be the wakeup keys in special case */
 static ssize_t wakeup_enable(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -525,6 +506,23 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 		input_booster_send_event(BOOSTER_DEVICE_TOUCHKEY, !!state);
 #endif
 }
+
+static void gpio_keys_early_suspend(struct power_suspend *handler)
+{
+	suspended = true;
+	return;
+}
+
+static void gpio_keys_late_resume(struct power_suspend *handler)
+{
+	suspended = false;
+	return;
+}
+
+static struct power_suspend gpio_suspend = {
+	.suspend = gpio_keys_early_suspend,
+	.resume = gpio_keys_late_resume,
+};
 
 static void gpio_keys_gpio_work_func(struct work_struct *work)
 {
@@ -1141,7 +1139,7 @@ static struct platform_driver gpio_keys_device_driver = {
 
 static int __init gpio_keys_init(void)
 {
-        state_register_client(&gpio_notifier_block);
+        register_power_suspend(&gpio_suspend);
         wake_lock_init(&sync_wake_lock, WAKE_LOCK_SUSPEND,
 		"sync_wake_lock");
 	return platform_driver_register(&gpio_keys_device_driver);
