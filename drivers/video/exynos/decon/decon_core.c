@@ -55,7 +55,7 @@
 #include "dsim.h"
 #include "decon_helper.h"
 #include "mdnie_reg.h"
-#include "../../../staging/android/sw_sync.h"
+#include "../../../android/sw_sync.h"
 #include "vpp/vpp_core.h"
 
 #define SUCCESS_EXYNOS_SMC	2

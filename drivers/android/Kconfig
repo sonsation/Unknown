@@ -135,9 +135,9 @@ config SW_SYNC_USER
 	  *WARNING* improper use of this can result in deadlocking kernel
 	  drivers from userspace.
 
-source "drivers/staging/android/ion/Kconfig"
+source "drivers/android/ion/Kconfig"
 
-source "drivers/staging/android/fiq_debugger/Kconfig"
+source "drivers/android/fiq_debugger/Kconfig"
 
 endif # if ANDROID
 
