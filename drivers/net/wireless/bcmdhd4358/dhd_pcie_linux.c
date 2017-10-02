@@ -1,7 +1,7 @@
 /*
  * Linux DHD Bus Module for PCIE
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_pcie_linux.c 667661 2016-10-28 03:14:43Z $
+ * $Id: dhd_pcie_linux.c 680234 2017-01-19 04:48:17Z $
  */
 
 
@@ -770,6 +770,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 		msm_pcie_register_event(&bus->pcie_event);
 		bus->no_cfg_restore = FALSE;
 #endif /* CONFIG_ARCH_MSM */
+		bus->read_shm_fail = false;
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 
 		if (bus->intr) {

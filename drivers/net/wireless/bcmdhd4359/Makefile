@@ -1,5 +1,5 @@
 #
-# Copyright (C) 1999-2016, Broadcom Corporation
+# Copyright (C) 1999-2017, Broadcom Corporation
 # 
 #      Unless you and Broadcom execute a separate written software license
 # agreement governing use of this software, this software is licensed to you
@@ -127,6 +127,9 @@ DHDCFLAGS += -DDHD_8021X_DUMP
 # Print DHCP
 DHDCFLAGS += -DDHD_DHCP_DUMP
 
+# Print ICMP
+DHDCFLAGS += -DDHD_ICMP_DUMP
+
 # VSDB
 DHDCFLAGS += -DVSDB
 
@@ -251,6 +254,9 @@ DHDCFLAGS += -DUSE_WFA_CERT_CONF
 
 DHDCFLAGS += -DCUSTOMER_SCAN_TIMEOUT_SETTING
 
+# Enable HANG event test private command
+DHDCFLAGS += -DSUPPORT_TRIGGER_HANG_EVENT
+
 # Android Version Check from Platform source
 CANDIDATE_VERSION_PATH := ./../../build/core ../../../../../../build/core out
 FOUND_VERSION_PATH := $(foreach dir,$(CANDIDATE_VERSION_PATH), $(wildcard $(dir)/version_defaults.mk))
@@ -340,6 +346,10 @@ ifeq ($(BUS_IFACE_PCIE),y)
   DHDCFLAGS += -DCUSTOM_TCPACK_SUPP_RATIO=15
   DHDCFLAGS += -DCUSTOM_TCPACK_DELAY_TIME=10
   DHDCFLAGS += -DDHDTCPACK_SUPPRESS
+ifeq ($(filter y,$(CONFIG_ARCH_MSM8996) $(CONFIG_SOC_EXYNOS8890) $(CONFIG_MACH_UNIVERSAL7420)),y)
+ # Enable Dongle Isolation
+  DHDCFLAGS += -DDONGLE_ENABLE_ISOLATION
+endif
 endif
 
 ifeq ($(CONFIG_ARCH_MSM),y)
@@ -361,7 +371,7 @@ endif
   DHDCFLAGS += -DSUPPORT_2G_VHT
   DHDCFLAGS += -DSUPPORT_WL_TXPOWER
   DHDCFLAGS += -DWL11ULB
-# DHDCFLAGS += -DENABLE_IPMCAST_FILTER
+  DHDCFLAGS += -DENABLE_IPMCAST_FILTER
  # Enable SensorHub Move/Stop
 #ifeq ($(filter y,$(CONFIG_WLAN_GRACE) $(CONFIG_SEC_GRACEQLTE_PROJECT)),y)
 # DHDCFLAGS += -DSUPPORT_SENSORHUB
@@ -384,17 +394,17 @@ endif
 # To support CAC
   DHDCFLAGS += -DSUPPORT_SET_CAC
 
-ifeq ($(filter y,$(CONFIG_ARCH_MSM8996) $(CONFIG_SOC_EXYNOS8890)),y)
+ifeq ($(filter y,$(CONFIG_ARCH_MSM8996) $(CONFIG_SOC_EXYNOS8890) $(CONFIG_ARCH_TEGRA)),y)
  # Runtime PM
   DHDCFLAGS += -DDHD_PCIE_RUNTIMEPM -DMAX_IDLE_COUNT=11 -DCUSTOM_DHD_RUNTIME_MS=100
- # Enable Dongle Isolation
-  DHDCFLAGS += -DDONGLE_ENABLE_ISOLATION
  # Disable SOFTAP_SEND_HANGEVT
   DHDCFLAGS := $(filter-out -DSOFTAP_SEND_HANGEVT,$(DHDCFLAGS))
  # CLM
   DHDCFLAGS += -DDHD_SUPPORT_GB_999
  # Configure MU-MIMO capability
-  #DHDCFLAGS += -DDYNAMIC_MUMIMO_CONTROL
+ifeq ($(CONFIG_SOC_EXYNOS8890),y)
+  DHDCFLAGS += -DDYNAMIC_MUMIMO_CONTROL
+endif
 endif
 
 ifeq ($(filter y,$(CONFIG_WLAN_HERO) $(CONFIG_SEC_HEROQLTE_PROJECT)),y)
@@ -406,7 +416,8 @@ ifeq ($(filter y,$(CONFIG_WLAN_HERO2) $(CONFIG_SEC_HERO2QLTE_PROJECT)),y)
 endif
 
 ifeq ($(filter y,$(CONFIG_WLAN_GRACE) $(CONFIG_SEC_GRACEQLTE_PROJECT)),y)
-  DHDCFLAGS += -DDHD_USE_CLMINFO_PARSER
+  # CLM Country single regrev
+  DHDCFLAGS += -DCOUNTRY_SINGLE_REGREV
   # WBTEXT (11kv) feature
   DHDCFLAGS += -DWBTEXT
 endif
@@ -416,6 +427,8 @@ endif
  # LOGTRACE_EVENT
   DHDCFLAGS += -DSHOW_LOGTRACE
   DHDCFLAGS += -DLOGTRACE_FROM_FILE
+ # HANG simulation
+  DHDCFLAGS += -DDHD_HANG_SEND_UP_TEST
 
 ifeq ($(CONFIG_BCM4359),y)
   DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
@@ -468,6 +481,10 @@ ifeq ($(BUS_IFACE_PCIE),y)
   DHDCFLAGS += -DCUSTOM_TCPACK_SUPP_RATIO=15
   DHDCFLAGS += -DCUSTOM_TCPACK_DELAY_TIME=10
   DHDCFLAGS += -DDHDTCPACK_SUPPRESS
+ifeq ($(filter y,$(CONFIG_MACH_UNIVERSAL7420)),y)
+ # Enable Dongle Isolation
+  DHDCFLAGS += -DDONGLE_ENABLE_ISOLATION
+endif
 endif
 
 ifeq ($(CONFIG_ARCH_MSM),y)
@@ -879,6 +896,17 @@ endif #CONFIG_OF
 # DEBUG UART
 ifneq ($(CONFIG_WLAN_GRACE),)
 DHDCFLAGS += -DDHD_DEBUG_UART
+endif
+
+ifneq ($(CONFIG_ARCH_TEGRA),)
+DHDCFLAGS += -DBCMPCIE_OOB_HOST_WAKE
+DHDCFLAGS := $(filter-out -DDHD_ALLOC_COHERENT_MEM_FROM_ATOMIC_POOL,$(DHDCFLAGS))
+DHDCFLAGS := $(filter-out -DDHD_USE_CLMINFO_PARSER,$(DHDCFLAGS))
+DHDCFLAGS := $(filter-out -DWL_VENDOR_EXT_SUPPORT,$(DHDCFLAGS))
+DHDCFLAGS := $(filter-out -DGSCAN_SUPPORT,$(DHDCFLAGS))
+DHDCFLAGS := $(filter-out -DRTT_SUPPORT,$(DHDCFLAGS))
+DHD_ANDROID_OFILES := $(filter-out wl_cfgvendor.o,$(DHD_ANDROID_OFILES))
+DHD_ANDROID_OFILES := $(filter-out dhd_rtt.o,$(DHD_ANDROID_OFILES))
 endif
 
 ##############################################################

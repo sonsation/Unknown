@@ -1,7 +1,7 @@
 /*
  * Customer HW 4 dependant file
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -48,8 +48,10 @@ struct cntry_locales_custom {
 	int32 custom_locale_rev; /* Custom local revisin default -1 */
 };
 
-#if !defined(DHD_USE_CLMINFO_PARSER)
+#if defined(DHD_USE_CLMINFO_PARSER)
 /* Locale table for sec */
+struct cntry_locales_custom translate_custom_table[NUM_OF_COUNTRYS];
+#elif !defined(DHD_USE_CLMINFO_PARSER) && !defined(COUNTRY_SINGLE_REGREV)
 const struct cntry_locales_custom translate_custom_table[] = {
 #if defined(BCM4330_CHIP) || defined(BCM4334_CHIP) || defined(BCM43241_CHIP)
 	/* 4330/4334/43241 */
@@ -341,10 +343,9 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"CA", "Q2", 993},
 #endif /* default ccode/regrev */
 };
-#else
-struct cntry_locales_custom translate_custom_table[NUM_OF_COUNTRYS];
 #endif /* DHD_USE_CLMINFO_PARSER */
 
+#if !defined(COUNTRY_SINGLE_REGREV)
 /* Customized Locale convertor
 *  input : ISO 3166-1 country abbreviation
 *  output: customized cspec
@@ -371,6 +372,7 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	}
 	return;
 }
+#endif /* !COUNTRY_SINGLE_REGREV */
 
 #define PSMINFO	PLATFORM_PATH".psm.info"
 #define	REVINFO	PLATFORM_PATH".rev"

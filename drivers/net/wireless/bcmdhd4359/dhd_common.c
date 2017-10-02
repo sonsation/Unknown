@@ -1,7 +1,7 @@
 /*
  * Broadcom Dongle Host Driver (DHD), common DHD core.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_common.c 668603 2016-11-04 04:11:58Z $
+ * $Id: dhd_common.c 679766 2017-01-17 09:10:53Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -133,6 +133,8 @@ bool ap_fw_loaded = FALSE;
 #endif
 #define DHD_COMPILED "\nCompiled in " SRCBASE
 #endif /* DHD_DEBUG */
+
+#define CHIPID_MISMATCH	8
 
 #if defined(DHD_DEBUG)
 const char dhd_version[] = "Dongle Host Driver, version " EPI_VERSION_STR
@@ -3882,7 +3884,7 @@ dhd_download_2_dongle(dhd_pub_t	*dhd, char *iovar, uint16 flag, uint16 dload_typ
 	dload_ptr->dload_type = dload_type;
 	dload_ptr->len = htod32(len - dload_data_offset);
 	dload_ptr->crc = 0;
-	len = len + 8 - (len%8);
+	len = ROUNDUP(len, 8);
 
 	iovar_len = bcm_mkiovar(iovar, dload_buf,
 		(uint)len, iovar_buf, sizeof(iovar_buf));
@@ -3909,6 +3911,7 @@ dhd_download_clm_blob(dhd_pub_t *dhd, unsigned char *image, uint32 len)
 
 	data_offset = OFFSETOF(wl_dload_data_t, data);
 	size2alloc = data_offset + MAX_CHUNK_LEN;
+	size2alloc = ROUNDUP(size2alloc, 8);
 
 	if ((new_buf = (unsigned char *)MALLOCZ(dhd->osh, size2alloc)) != NULL) {
 		do {
@@ -4004,6 +4007,9 @@ dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
 			} else {
 				DHD_ERROR(("%s: clmload_status: %d \n",
 					__FUNCTION__, *((int *)iovbuf)));
+				if (*((int *)iovbuf) == CHIPID_MISMATCH) {
+					DHD_ERROR(("Chip ID mismatch error \n"));
+				}
 			}
 			err = BCME_ERROR;
 			goto exit;
@@ -4105,9 +4111,10 @@ dhd_get_clminfo(dhd_pub_t *dhd, char *clm_path)
 	char *memblock = NULL;
 	char *bufp;
 	uint len = MAX_CLMINFO_BUF_SIZE;
+	uint str_ln;
 	char *tokenp = NULL;
 	int cnt = 0;
-
+	char *temp_buf = NULL;
 	char tokdelim;
 	int parse_step = 0;
 	/*
@@ -4142,9 +4149,10 @@ dhd_get_clminfo(dhd_pub_t *dhd, char *clm_path)
 			bcmerror = BCME_ERROR;
 			goto out;
 		}
-
+		temp_buf = bcmstrtok(&bufp, ";", &tokdelim);
+		str_ln = strlen(temp_buf);
 		/* read clm_path */
-		strcpy(clm_path, bcmstrtok(&bufp, ";", &tokdelim));
+		strncpy(clm_path, temp_buf, str_ln);
 		len -= (strlen(clm_path) + 1);
 
 		DHD_INFO(("%s: Found clm_path %s\n", __FUNCTION__, clm_path));

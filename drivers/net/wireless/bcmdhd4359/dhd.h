@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -27,7 +27,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd.h 668603 2016-11-04 04:11:58Z $
+ * $Id: dhd.h 682588 2017-02-02 11:41:56Z $
  */
 
 /****************
@@ -251,7 +251,10 @@ enum dhd_dongledump_type {
 	DUMP_TYPE_BY_SYSDUMP,
 	DUMP_TYPE_BY_LIVELOCK,
 	DUMP_TYPE_AP_LINKUP_FAILURE,
-	DUMP_TYPE_AP_ABNORMAL_ACCESS
+	DUMP_TYPE_AP_ABNORMAL_ACCESS,
+#ifdef SUPPORT_LINKDOWN_RECOVERY
+	DUMP_TYPE_READ_SHM_FAIL
+#endif /* SUPPORT_LINKDOWN_RECOVERY */
 };
 
 enum dhd_hang_reason {
@@ -265,7 +268,9 @@ enum dhd_hang_reason {
 	HANG_REASON_P2P_IFACE_DEL_FAILURE = 0x8007,
 	HANG_REASON_HT_AVAIL_ERROR = 0x8008,
 	HANG_REASON_PCIE_RC_LINK_UP_FAIL = 0x8009,
-	HANG_REASON_MAX = 0x800a
+	HANG_REASON_PCIE_PKTID_ERROR = 0x800A,
+	HANG_REASON_INVALID_EVENT_OR_DATA = 0x8806,
+	HANG_REASON_MAX = 0x8807
 };
 
 enum dhd_rsdb_scan_features {
@@ -409,6 +414,18 @@ extern void dhd_log_dump_write(int type, const char *fmt, ...);
 extern char *dhd_log_dump_get_timestamp(void);
 #endif /* DHD_LOG_DUMP */
 #define DHD_COMMON_DUMP_PATH	"/data/misc/wifi/log/"
+
+/* check the coexistence of COUNTRY_SINGLE_REGREV with
+ * DHD_USE_CLMINFO_PARSER or CUSTOM_COUNTRY_CODE
+ */
+#if defined(COUNTRY_SINGLE_REGREV) && (defined(DHD_USE_CLMINFO_PARSER) || \
+	defined(CUSTOM_COUNTRY_CODE))
+#ifdef DHD_USE_CLMINFO_PARSER
+#error "DHD_USE_CLMINFO_PARSER and COUNTRY_SINGLE_REGREV cannot co-exist."
+#else
+#error "CUSTOM_COUNTRY_CODE and COUNTRY_SINGLE_REGREV cannot co-exist."
+#endif /* DHD_USE_CLMINFO_PARSER */
+#endif /* COUNTRY_SINGLE_REGREV && (DHD_USE_CLMINFO_PARSER || CUSTOM_COUNTRY_CODE) */
 
 /* Common structure for module and instance linkage */
 typedef struct dhd_pub {
@@ -571,6 +588,9 @@ typedef struct dhd_pub {
 #endif /* BCMPCIE */
 	bool hang_report;		/* enable hang report by default */
 	uint16 hang_reason;		/* reason codes for HANG event */
+#if defined(DHD_HANG_SEND_UP_TEST)
+	uint req_hang_type;
+#endif /* DHD_HANG_SEND_UP_TEST */
 #ifdef WLTDLS
 	bool tdls_enable;
 #endif
@@ -672,6 +692,9 @@ typedef struct dhd_pub {
 	uint8 murx_block_eapol;
 #endif /* DYNAMIC_MUMIMO_CONTROL */
 	bool wbtext_support;
+#ifdef WLTDLS
+	spinlock_t tdls_lock;
+#endif /* WLTDLS */
 } dhd_pub_t;
 
 #if defined(PCIE_FULL_DONGLE)
@@ -1114,10 +1137,10 @@ extern void dhd_os_tcpackunlock(dhd_pub_t *pub, unsigned long flags);
 extern int dhd_customer_oob_irq_map(void *adapter, unsigned long *irq_flags_ptr);
 extern int dhd_customer_gpio_wlan_ctrl(void *adapter, int onoff);
 extern int dhd_custom_get_mac_address(void *adapter, unsigned char *buf);
-#ifdef CUSTOM_COUNTRY_CODE
+#if defined(CUSTOM_COUNTRY_CODE)
 extern void get_customized_country_code(void *adapter, char *country_iso_code,
-wl_country_t *cspec, u32 flags);
-#else
+	wl_country_t *cspec, u32 flags);
+#elif !defined(COUNTRY_SINGLE_REGREV)
 extern void get_customized_country_code(void *adapter, char *country_iso_code, wl_country_t *cspec);
 #endif /* CUSTOM_COUNTRY_CODE */
 extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
@@ -1664,6 +1687,10 @@ extern void dhd_os_general_spin_unlock(dhd_pub_t *pub, unsigned long flags);
 #define DHD_FLOWRING_LIST_LOCK(lock, flags)       (flags) = dhd_os_spin_lock(lock)
 #define DHD_FLOWRING_LIST_UNLOCK(lock, flags)     dhd_os_spin_unlock((lock), (flags))
 
+/* Enable DHD TDLS peer list spin lock/unlock */
+#define DHD_TDLS_LOCK(lock, flags)       (flags) = dhd_os_spin_lock(lock)
+#define DHD_TDLS_UNLOCK(lock, flags)     dhd_os_spin_unlock((lock), (flags))
+
 extern void dhd_dump_to_kernelog(dhd_pub_t *dhdp);
 
 
@@ -1843,5 +1870,19 @@ void dhd_pktid_audit_fail_cb(dhd_pub_t *dhdp);
 
 int dhd_check_eapol_4way_message(char *dump_data);
 void dhd_dump_eapol_4way_message(char *ifname, char *dump_data, bool direction);
+#ifdef DYNAMIC_MUMIMO_CONTROL
+#if defined(ARGOS_CPU_SCHEDULER) && defined(ARGOS_RPS_CPU_CTL)
+void argos_config_mumimo_reset(void);
+#endif /* ARGOS_CPU_SCHEDULER && ARGOS_RPS_CPU_CTL */
+#endif /* DYNAMIC_MUMIMO_CONTROL */
 
+#if defined(CONFIG_64BIT)
+#define DHD_SUPPORT_64BIT
+#elif defined(DHD_EFI)
+#define DHD_SUPPORT_64BIT
+/* by default disabled for other platforms, can enable appropriate macro to enable 64 bit support */
+#endif /* (linux || LINUX) && CONFIG_64BIT */
+#if defined(DHD_HANG_SEND_UP_TEST)
+extern void dhd_make_hang_with_reason(struct net_device *dev, const char *string_num);
+#endif /* DHD_HANG_SEND_UP_TEST */
 #endif /* _dhd_h_ */

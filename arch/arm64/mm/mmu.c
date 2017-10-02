@@ -416,9 +416,9 @@ static void __init map_mem(void)
 #ifdef CONFIG_KNOX_KAP
 	if (boot_mode_security) {
 #endif
-		vmm_extra_mem = early_alloc(0x600000);
+		vmm_extra_mem = early_alloc(0x800000);
 		/* Turn text boundries to page tables if needed */
-#if 0		
+#if 1		
 		/*Disable temprarly to prevent S1 page tables break down*/
 		if ((u64) _text & (~PMD_MASK)) {
 				start = (phys_addr_t) __pa(_text) & PMD_MASK;

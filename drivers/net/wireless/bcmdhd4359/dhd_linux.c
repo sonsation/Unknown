@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), Linux-specific network interface
  * Basically selected code segments from usb-cdc.c and usb-rndis.c
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +25,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_linux.c 670035 2016-11-13 04:51:31Z $
+ * $Id: dhd_linux.c 683117 2017-02-06 09:10:50Z $
  */
 
 #include <typedefs.h>
@@ -338,6 +338,16 @@ extern int dhd_logtrace_from_file(dhd_pub_t *dhd);
 #endif /* CUSTOMER_HW4 */
 
 #ifdef ARGOS_CPU_SCHEDULER
+#if defined(CONFIG_SPLIT_ARGOS_SET)
+#define ARGOS_WIFI_TABLE_LABEL "WIFI RX"
+#if defined(DYNAMIC_MUMIMO_CONTROL)
+#define ARGOS_WIFI_TABLE_FOR_MIMO_LABEL "WIFI"
+#endif /* DYNAMIC_MUMIMO_CONTROL */
+#else /* CONFIG_SPLIT_ARGOS_SET */
+#define ARGOS_WIFI_TABLE_LABEL "WIFI"
+#endif /* CONFIG_SPLIT_ARGOS_SET  */
+#define ARGOS_P2P_TABLE_LABEL "P2P"
+
 extern int argos_task_affinity_setup_label(struct task_struct *p, const char *label,
 	struct cpumask * affinity_cpu_mask, struct cpumask * default_cpu_mask);
 extern struct cpumask hmp_slow_cpu_mask;
@@ -361,9 +371,17 @@ static int argos_status_notifier_wifi_cb(struct notifier_block *notifier,
 static int argos_status_notifier_p2p_cb(struct notifier_block *notifier,
 	unsigned long speed, void *v);
 
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+static int argos_status_notifier_config_mumimo_cb(struct notifier_block *notifier,
+	unsigned long speed, void *v);
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
+
 /* ARGOS notifer data */
 static struct notifier_block argos_wifi; /* STA */
 static struct notifier_block argos_p2p; /* P2P */
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+static struct notifier_block argos_mimo; /* STA */
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
 
 typedef struct {
 	struct net_device *wlan_primary_netdev;
@@ -388,10 +406,6 @@ argos_mumimo_ctrl argos_mumimo_ctrl_data;
 #define SUMIMO_TO_MUMIMO_TPUT_THRESHOLD		0
 #define MUMIMO_TO_SUMIMO_TPUT_THRESHOLD		150
 #endif /* ARGOS_RPS_CPU_CTL && ARGOS_CPU_SCHEDULER */
-
-#ifdef DYNAMIC_MUMIMO_CONTROL
-bool dhd_check_tx_eapol_m4(struct net_device *ndev, dhd_pub_t *dhdp, void *pkt);
-#endif /* DYNAMIC_MUMIMO_CONTROL */
 
 
 
@@ -849,6 +863,11 @@ module_param(dhd_dongle_ramsize, int, 0);
 static int dhd_found = 0;
 static int instance_base = 0; /* Starting instance number */
 module_param(instance_base, int, 0644);
+
+#ifdef DHD_ICMP_DUMP
+#include <net/icmp.h>
+static void dhd_icmp_dump(char *ifname, uint8 *pktdata, bool tx);
+#endif /* DHD_ICMP_DUMP */
 
 /* Functions to manage sysfs interface for dhd */
 static int dhd_sysfs_init(dhd_info_t *dhd);
@@ -3841,8 +3860,8 @@ __dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 #endif /* DHD_LOSSLESS_ROAMING */
 			atomic_inc(&dhd->pend_8021x_cnt);
 		}
-#ifdef DHD_DHCP_DUMP
 		if (ntoh16(eh->ether_type) == ETHER_TYPE_IP) {
+#ifdef DHD_DHCP_DUMP
 			uint16 dump_hex;
 			uint16 source_port;
 			uint16 dest_port;
@@ -3880,8 +3899,11 @@ __dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 			} else if (source_port == 0x0043 || dest_port == 0x0043) {
 				DHD_ERROR(("DHCP[%s] - BOOTP [RX]\n", ifname));
 			}
-		}
 #endif /* DHD_DHCP_DUMP */
+#ifdef DHD_ICMP_DUMP
+			dhd_icmp_dump(dhd_ifname(dhdp, ifidx), pktdata, TRUE);
+#endif /* DHD_ICMP_DUMP */
+		}
 	} else {
 			PKTCFREE(dhdp->osh, pktbuf, TRUE);
 			return BCME_ERROR;
@@ -4066,6 +4088,13 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 
 	DHD_OS_WAKE_LOCK(&dhd->pub);
 	DHD_PERIM_LOCK_TRY(DHD_FWDER_UNIT(dhd), lock_taken);
+
+
+#if defined(DHD_HANG_SEND_UP_TEST)
+	if (dhd->pub.req_hang_type == HANG_REASON_BUS_DOWN) {
+		dhd->pub.busstate = DHD_BUS_DOWN;
+	}
+#endif /* DHD_HANG_SEND_UP_TEST */
 
 	/* Reject if down */
 	if (dhd->pub.hang_was_sent || dhd->pub.busstate == DHD_BUS_DOWN ||
@@ -4320,11 +4349,12 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 	int tout_ctrl = 0;
 	void *skbhead = NULL;
 	void *skbprev = NULL;
-#if defined(DHD_RX_DUMP) || defined(DHD_8021X_DUMP) || defined(DHD_DHCP_DUMP)
+#if defined(DHD_RX_DUMP) || defined(DHD_8021X_DUMP) || defined(DHD_DHCP_DUMP) || \
+	defined(DHD_ICMP_DUMP)
 	char *dump_data;
 	uint16 protocol;
 	char *ifname;
-#endif /* DHD_RX_DUMP || DHD_8021X_DUMP || DHD_DHCP_DUMP */
+#endif /* DHD_RX_DUMP || DHD_8021X_DUMP || DHD_DHCP_DUMP || DHD_ICMP_DUMP */
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -4465,18 +4495,18 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 		eth = skb->data;
 		len = skb->len;
 
-#if defined(DHD_RX_DUMP) || defined(DHD_8021X_DUMP) || defined(DHD_DHCP_DUMP)
+#if defined(DHD_RX_DUMP) || defined(DHD_8021X_DUMP) || defined(DHD_DHCP_DUMP) || \
+	defined(DHD_ICMP_DUMP)
 		dump_data = skb->data;
 		protocol = (dump_data[12] << 8) | dump_data[13];
 		ifname = skb->dev ? skb->dev->name : "N/A";
-#endif /* DHD_RX_DUMP || DHD_8021X_DUMP || DHD_DHCP_DUMP */
 #ifdef DHD_8021X_DUMP
 		if (protocol == ETHER_TYPE_802_1X) {
 			dhd_dump_eapol_4way_message(ifname, dump_data, FALSE);
 		}
 #endif /* DHD_8021X_DUMP */
-#ifdef DHD_DHCP_DUMP
 		if (protocol != ETHER_TYPE_BRCM && protocol == ETHER_TYPE_IP) {
+#ifdef DHD_DHCP_DUMP
 			uint16 dump_hex;
 			uint16 source_port;
 			uint16 dest_port;
@@ -4504,8 +4534,11 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 			} else if (source_port == 0x0043 || dest_port == 0x0043) {
 				DHD_ERROR(("DHCP[%s] - BOOTP [RX]\n", ifname));
 			}
-		}
 #endif /* DHD_DHCP_DUMP */
+#ifdef DHD_ICMP_DUMP
+			dhd_icmp_dump(ifname, dump_data, FALSE);
+#endif /* DHD_ICMP_DUMP */
+		}
 #if defined(DHD_RX_DUMP)
 		DHD_ERROR(("RX DUMP[%s] - %s\n", ifname, _get_packet_type_str(protocol)));
 		if (protocol != ETHER_TYPE_BRCM) {
@@ -4534,6 +4567,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 #endif /* DHD_RX_FULL_DUMP */
 		}
 #endif /* DHD_RX_DUMP */
+#endif /* DHD_RX_DUMP || DHD_8021X_DUMP || DHD_DHCP_DUMP || DHD_ICMP_DUMP */
 
 		skb->protocol = eth_type_trans(skb, skb->dev);
 
@@ -5220,27 +5254,19 @@ dhd_rxf_thread(void *data)
 #ifdef BCMPCIE
 void dhd_dpc_enable(dhd_pub_t *dhdp)
 {
+#if defined(DHD_LB_RXP)
 	dhd_info_t *dhd;
 
 	if (!dhdp || !dhdp->info)
 		return;
 	dhd = dhdp->info;
+#endif /* DHD_LB_RXP */
 
 #ifdef DHD_LB
 #ifdef DHD_LB_RXP
 	__skb_queue_head_init(&dhd->rx_pend_queue);
 #endif /* DHD_LB_RXP */
-#ifdef DHD_LB_TXC
-	if (atomic_read(&dhd->tx_compl_tasklet.count) == 1)
-		tasklet_enable(&dhd->tx_compl_tasklet);
-#endif /* DHD_LB_TXC */
-#ifdef DHD_LB_RXC
-	if (atomic_read(&dhd->rx_compl_tasklet.count) == 1)
-		tasklet_enable(&dhd->rx_compl_tasklet);
-#endif /* DHD_LB_RXC */
 #endif /* DHD_LB */
-	if (atomic_read(&dhd->tasklet.count) ==  1)
-		tasklet_enable(&dhd->tasklet);
 }
 #endif /* BCMPCIE */
 
@@ -5262,21 +5288,18 @@ dhd_dpc_kill(dhd_pub_t *dhdp)
 	}
 
 	if (dhd->thr_dpc_ctl.thr_pid < 0) {
-		tasklet_disable(&dhd->tasklet);
 		tasklet_kill(&dhd->tasklet);
 		DHD_ERROR(("%s: tasklet disabled\n", __FUNCTION__));
 	}
 #if defined(DHD_LB)
+	/* Kill the Load Balancing Tasklets */
 #ifdef DHD_LB_RXP
 	__skb_queue_purge(&dhd->rx_pend_queue);
 #endif /* DHD_LB_RXP */
-	/* Kill the Load Balancing Tasklets */
 #if defined(DHD_LB_TXC)
-	tasklet_disable(&dhd->tx_compl_tasklet);
 	tasklet_kill(&dhd->tx_compl_tasklet);
 #endif /* DHD_LB_TXC */
 #if defined(DHD_LB_RXC)
-	tasklet_disable(&dhd->rx_compl_tasklet);
 	tasklet_kill(&dhd->rx_compl_tasklet);
 #endif /* DHD_LB_RXC */
 #endif /* DHD_LB */
@@ -5970,6 +5993,13 @@ dhd_stop(struct net_device *net)
 	if (dhd->pub.up == 0) {
 		goto exit;
 	}
+#if defined(DHD_HANG_SEND_UP_TEST)
+	if (dhd->pub.req_hang_type) {
+		DHD_ERROR(("%s, Clear HANG test request 0x%x\n",
+			__FUNCTION__, dhd->pub.req_hang_type));
+		dhd->pub.req_hang_type = 0;
+	}
+#endif /* DHD_HANG_SEND_UP_TEST */
 
 	dhd_if_flush_sta(DHD_DEV_IFP(net));
 
@@ -7197,6 +7227,10 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	mutex_init(&dhd->dhd_iovar_mutex);
 	sema_init(&dhd->proto_sem, 1);
 
+#if defined(DHD_HANG_SEND_UP_TEST)
+	dhd->pub.req_hang_type = 0;
+#endif /* DHD_HANG_SEND_UP_TEST */
+
 #ifdef PROP_TXSTATUS
 	spin_lock_init(&dhd->wlfc_spinlock);
 
@@ -7228,6 +7262,10 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	spin_lock_init(&dhd->txqlock);
 	spin_lock_init(&dhd->dhd_lock);
 	spin_lock_init(&dhd->rxf_lock);
+#ifdef WLTDLS
+	spin_lock_init(&dhd->pub.tdls_lock);
+#endif /* WLTDLS */
+
 #if defined(RXFRAME_THREAD)
 	dhd->rxthread_enabled = TRUE;
 #endif /* defined(RXFRAME_THREAD) */
@@ -7953,6 +7991,7 @@ void dhd_tdls_update_peer_info(struct net_device *dev, bool connect, uint8 *da)
 	dhd_if_t *dhdif;
 	uint8 sa[ETHER_ADDR_LEN];
 	int ifidx = dhd_net2idx(dhd, dev);
+	unsigned long flags;
 
 	if (ifidx == DHD_BAD_IF)
 		return;
@@ -7976,20 +8015,23 @@ void dhd_tdls_update_peer_info(struct net_device *dev, bool connect, uint8 *da)
 			return;
 		}
 		memcpy(new->addr, da, ETHER_ADDR_LEN);
+		DHD_TDLS_LOCK(&dhdp->tdls_lock, flags);
 		new->next = dhdp->peer_tbl.node;
 		dhdp->peer_tbl.node = new;
 		dhdp->peer_tbl.tdls_peer_count++;
-
+		DHD_TDLS_UNLOCK(&dhdp->tdls_lock, flags);
 	} else {
 		while (cur != NULL) {
 			if (!memcmp(da, cur->addr, ETHER_ADDR_LEN)) {
 				dhd_flow_rings_delete_for_peer(dhdp, ifidx, da);
+				DHD_TDLS_LOCK(&dhdp->tdls_lock, flags);
 				if (prev)
 					prev->next = cur->next;
 				else
 					dhdp->peer_tbl.node = cur->next;
 				MFREE(dhdp->osh, cur, sizeof(tdls_peer_node_t));
 				dhdp->peer_tbl.tdls_peer_count--;
+				DHD_TDLS_UNLOCK(&dhdp->tdls_lock, flags);
 				return;
 			}
 			prev = cur;
@@ -10719,7 +10761,7 @@ dhd_os_tcpackunlock(dhd_pub_t *pub, unsigned long flags)
 
 	if (dhd) {
 #ifdef BCMSDIO
-		spin_lock_bh(&dhd->tcpack_lock);
+		spin_unlock_bh(&dhd->tcpack_lock);
 #else
 		spin_unlock_irqrestore(&dhd->tcpack_lock, flags);
 #endif /* BCMSDIO */
@@ -12202,6 +12244,14 @@ int dhd_os_send_hang_message(dhd_pub_t *dhdp)
 {
 	int ret = 0;
 	if (dhdp) {
+#if defined(DHD_HANG_SEND_UP_TEST)
+		if (dhdp->req_hang_type) {
+			DHD_ERROR(("%s, Clear HANG test request 0x%x\n",
+				__FUNCTION__, dhdp->req_hang_type));
+			dhdp->req_hang_type = 0;
+		}
+#endif /* DHD_HANG_SEND_UP_TEST */
+
 		if (!dhdp->hang_was_sent) {
 #ifdef DHD_DEBUG_UART
 			/* If PCIe lane has broken, execute the debug uart application
@@ -12288,22 +12338,32 @@ void dhd_get_customized_country_code(struct net_device *dev, char *country_iso_c
 	wl_country_t *cspec)
 {
 	dhd_info_t *dhd = DHD_DEV_INFO(dev);
-#ifdef CUSTOM_COUNTRY_CODE
+#if defined(CUSTOM_COUNTRY_CODE)
 	get_customized_country_code(dhd->adapter, country_iso_code, cspec,
 			dhd->pub.dhd_cflags);
-#else
+#elif !defined(COUNTRY_SINGLE_REGREV)
 	get_customized_country_code(dhd->adapter, country_iso_code, cspec);
 #endif /* CUSTOM_COUNTRY_CODE */
 
-#ifdef KEEP_KR_REGREV
+#if defined(KEEP_KR_REGREV) && !defined(COUNTRY_SINGLE_REGREV)
 	if (strncmp(country_iso_code, "KR", 3) == 0 && strncmp(dhd->pub.vars_ccode, "KR", 3) == 0) {
 		cspec->rev = dhd->pub.vars_regrev;
 	}
-#endif /* KEEP_KR_REGREV */
+#endif /* KEEP_KR_REGREV && !COUNTRY_SINGLE_REGREV */
 
 #ifdef KEEP_JP_REGREV
-	if (strncmp(country_iso_code, "JP", 3) == 0 && strncmp(dhd->pub.vars_ccode, "JP", 3) == 0) {
+	if (strncmp(country_iso_code, "JP", 3) == 0 &&
+		((strncmp(dhd->pub.vars_ccode, "JP", 3) == 0) ||
+#ifdef COUNTRY_SINGLE_REGREV
+		(strncmp(dhd->pub.vars_ccode, "J1", 3) == 0) ||
+#endif /* COUNTRY_SINGLE_REGREV */
+		0))  {
+#ifdef COUNTRY_SINGLE_REGREV
+		memcpy(cspec->ccode, dhd->pub.vars_ccode, sizeof(dhd->pub.vars_ccode));
+#else
 		cspec->rev = dhd->pub.vars_regrev;
+#endif /* COUNTRY_SINGLE_REGREV */
+
 	}
 #endif /* KEEP_JP_REGREV */
 }
@@ -12525,6 +12585,11 @@ dhd_convert_memdump_type_to_str(uint32 type, char *buf)
 		case DUMP_TYPE_AP_ABNORMAL_ACCESS:
 			type_str = "INVALID_ACCESS";
 			break;
+#ifdef SUPPORT_LINKDOWN_RECOVERY
+		case DUMP_TYPE_READ_SHM_FAIL:
+			type_str = "READ_SHM_FAIL";
+			break;
+#endif /* SUPPORT_LINKDOWN_RECOVERY */
 		default:
 			type_str = "Unknown_type";
 			break;
@@ -14386,7 +14451,7 @@ argos_config_mumimo_handler(struct work_struct *work)
 		DHD_ERROR(("%s: Failed to set murx_bfe_cap to %d, err=%d\n",
 			__FUNCTION__, new_cap, err));
 	} else {
-		DHD_INFO(("%s: Newly configured murx_bfe_cap = %d\n",
+		DHD_ERROR(("%s: Newly configured murx_bfe_cap = %d\n",
 			__FUNCTION__, new_cap));
 	}
 }
@@ -14452,7 +14517,7 @@ argos_status_notifier_config_mumimo(struct notifier_block *notifier,
 		mod_timer(&argos_mumimo_ctrl_data.config_timer,
 			jiffies + msecs_to_jiffies(MUMIMO_CONTROL_TIMER_INTERVAL_MS));
 
-		DHD_INFO(("%s: Arm the MU-MIMO control timer, cur_murx_bfe_cap=%d\n",
+		DHD_ERROR(("%s: Arm the MU-MIMO control timer, cur_murx_bfe_cap=%d\n",
 			__FUNCTION__, cap));
 	}
 }
@@ -14478,6 +14543,12 @@ argos_config_mumimo_deinit(void)
 
 	cancel_work_sync(&argos_mumimo_ctrl_data.mumimo_ctrl_work);
 }
+
+void
+argos_config_mumimo_reset(void)
+{
+	argos_mumimo_ctrl_data.cur_murx_bfe_cap = -1;
+}
 #endif /* DYNAMIC_MUMIMO_CONTROL */
 
 int
@@ -14494,19 +14565,34 @@ argos_register_notifier_init(struct net_device *net)
 
 	if (argos_wifi.notifier_call == NULL) {
 		argos_wifi.notifier_call = argos_status_notifier_wifi_cb;
-		ret = sec_argos_register_notifier(&argos_wifi, "WIFI");
+		ret = sec_argos_register_notifier(&argos_wifi, ARGOS_WIFI_TABLE_LABEL);
 		if (ret < 0) {
 			DHD_ERROR(("DHD:Failed to register WIFI notifier, ret=%d\n", ret));
 			goto exit;
 		}
 	}
 
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+	if (argos_mimo.notifier_call == NULL) {
+		argos_mimo.notifier_call = argos_status_notifier_config_mumimo_cb;
+		ret = sec_argos_register_notifier(&argos_mimo, ARGOS_WIFI_TABLE_FOR_MIMO_LABEL);
+		if (ret < 0) {
+			DHD_ERROR(("DHD:Failed to register WIFI for MIMO notifier, ret=%d\n", ret));
+			sec_argos_unregister_notifier(&argos_wifi, ARGOS_WIFI_TABLE_LABEL);
+			goto exit;
+		}
+	}
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
+
 	if (argos_p2p.notifier_call == NULL) {
 		argos_p2p.notifier_call = argos_status_notifier_p2p_cb;
-		ret = sec_argos_register_notifier(&argos_p2p, "P2P");
+		ret = sec_argos_register_notifier(&argos_p2p, ARGOS_P2P_TABLE_LABEL);
 		if (ret < 0) {
 			DHD_ERROR(("DHD:Failed to register P2P notifier, ret=%d\n", ret));
-			sec_argos_unregister_notifier(&argos_wifi, "WIFI");
+			sec_argos_unregister_notifier(&argos_wifi, ARGOS_WIFI_TABLE_LABEL);
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+			sec_argos_unregister_notifier(&argos_mimo, ARGOS_WIFI_TABLE_FOR_MIMO_LABEL);
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
 			goto exit;
 		}
 	}
@@ -14517,6 +14603,12 @@ exit:
 	if (argos_wifi.notifier_call) {
 		argos_wifi.notifier_call = NULL;
 	}
+
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+	if (argos_mimo.notifier_call) {
+		argos_mimo.notifier_call = NULL;
+	}
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
 
 	if (argos_p2p.notifier_call) {
 		argos_p2p.notifier_call = NULL;
@@ -14544,12 +14636,19 @@ argos_register_notifier_deinit(void)
 #endif /* !DHD_LB */
 
 	if (argos_p2p.notifier_call) {
-		sec_argos_unregister_notifier(&argos_p2p, "P2P");
+		sec_argos_unregister_notifier(&argos_p2p, ARGOS_P2P_TABLE_LABEL);
 		argos_p2p.notifier_call = NULL;
 	}
 
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+	if (argos_mimo.notifier_call) {
+		sec_argos_unregister_notifier(&argos_mimo, ARGOS_WIFI_TABLE_FOR_MIMO_LABEL);
+		argos_mimo.notifier_call = NULL;
+	}
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
+
 	if (argos_wifi.notifier_call) {
-		sec_argos_unregister_notifier(&argos_wifi, "WIFI");
+		sec_argos_unregister_notifier(&argos_wifi, ARGOS_WIFI_TABLE_LABEL);
 		argos_wifi.notifier_call = NULL;
 	}
 
@@ -14650,54 +14749,35 @@ argos_status_notifier_wifi_cb(struct notifier_block *notifier,
 {
 	DHD_ERROR(("DHD: %s: speed=%ld\n", __FUNCTION__, speed));
 	argos_status_notifier_cb(notifier, speed, v);
-#ifdef DYNAMIC_MUMIMO_CONTROL
+#if !defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
 	argos_status_notifier_config_mumimo(notifier, speed, v);
-#endif /* DYNAMIC_MUMIMO_CONTROL */
+#endif /* !CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
 
 	return NOTIFY_OK;
 }
+
+#if defined(CONFIG_SPLIT_ARGOS_SET) && defined(DYNAMIC_MUMIMO_CONTROL)
+int
+argos_status_notifier_config_mumimo_cb(struct notifier_block *notifier,
+	unsigned long speed, void *v)
+{
+	DHD_ERROR(("DHD: %s: speed=%ld\n", __FUNCTION__, speed));
+	argos_status_notifier_config_mumimo(notifier, speed, v);
+
+	return NOTIFY_OK;
+}
+#endif /* CONFIG_SPLIT_ARGOS_SET && DYNAMIC_MUMIMO_CONTROL */
 
 int
 argos_status_notifier_p2p_cb(struct notifier_block *notifier,
 	unsigned long speed, void *v)
 {
-	DHD_INFO(("DHD: %s: speed=%ld\n", __FUNCTION__, speed));
+	DHD_ERROR(("DHD: %s: speed=%ld\n", __FUNCTION__, speed));
 	argos_status_notifier_cb(notifier, speed, v);
 
 	return NOTIFY_OK;
 }
 #endif /* ARGOS_CPU_SCHEDULER && ARGOS_RPS_CPU_CTL */
-
-#ifdef DYNAMIC_MUMIMO_CONTROL
-bool
-dhd_check_tx_eapol_m4(struct net_device *ndev, dhd_pub_t *dhdp, void *pkt)
-{
-	uint8 *dump_data;
-	uint8 type;
-	uint16 protocol, key_info;
-	int pair, ack, mic, kerr, req, sec, install, ism4;
-
-	dump_data = PKTDATA(dhdp->osh, pkt);
-	protocol = (dump_data[12] << 8) | dump_data[13];
-	type = dump_data[18];
-	key_info = (dump_data[19] << 8) | dump_data[20];
-	pair = key_info & 0x08;
-	ack = key_info & 0x80;
-	mic = key_info & 0x100;
-	kerr = key_info & 0x400;
-	req = key_info & 0x800;
-	sec = key_info & 0x200;
-	install = key_info & 0x40;
-	ism4 = pair && !install && !ack && mic && sec && !req && !kerr;
-
-	if (protocol == ETHER_TYPE_802_1X && (type == 2 || type == 254) && ism4) {
-		DHD_INFO(("%s: Send EAPOL M4 Packet\n", __FUNCTION__));
-		return TRUE;
-	}
-
-	return FALSE;
-}
-#endif /* DYNAMIC_MUMIMO_CONTROL */
 
 
 #ifdef DHD_DEBUG_PAGEALLOC
@@ -14732,11 +14812,15 @@ dhd_pktid_audit_fail_cb(dhd_pub_t *dhdp)
 	DHD_OS_WAKE_LOCK(dhdp);
 	dhd_dump_to_kernelog(dhdp);
 #if defined(BCMPCIE) && defined(DHD_FW_COREDUMP)
-	/* Load the dongle side dump to host memory and then BUG_ON() */
-	dhdp->memdump_enabled = DUMP_MEMFILE_BUGON;
+	/* Load the dongle side dump to host memory */
+	if (dhdp->memdump_enabled == DUMP_DISABLED) {
+		dhdp->memdump_enabled = DUMP_MEMFILE;
+	}
 	dhdp->memdump_type = DUMP_TYPE_PKTID_AUDIT_FAILURE;
 	dhd_bus_mem_dump(dhdp);
 #endif /* BCMPCIE && DHD_FW_COREDUMP */
+	dhdp->hang_reason = HANG_REASON_PCIE_PKTID_ERROR;
+	dhd_os_check_hang(dhdp, 0, -EREMOTEIO);
 	DHD_OS_WAKE_UNLOCK(dhdp);
 }
 #endif /* DHD_PKTID_AUDIT_ENABLED */
@@ -14752,6 +14836,33 @@ dhd_linux_get_primary_netdev(dhd_pub_t *dhdp)
 		return NULL;
 	}
 }
+
+#ifdef DHD_ICMP_DUMP
+static void
+dhd_icmp_dump(char *ifname, uint8 *pktdata, bool tx)
+{
+	uint8 *pkt = (uint8 *)&pktdata[ETHER_HDR_LEN];
+	struct iphdr *iph = (struct iphdr *)pkt;
+	struct icmphdr *icmph;
+
+	/* check IP header */
+	if (iph->ihl != 5 || iph->version != 4 || iph->protocol != IP_PROT_ICMP) {
+		return;
+	}
+
+	icmph = (struct icmphdr *)((uint8 *)pkt + sizeof(struct iphdr));
+	if (icmph->type == ICMP_ECHO) {
+		DHD_ERROR(("PING REQUEST[%s] [%s] : SEQNUM=%d\n",
+			ifname, tx ? "TX" : "RX", ntoh16(icmph->un.echo.sequence)));
+	} else if (icmph->type == ICMP_ECHOREPLY) {
+		DHD_ERROR(("PING REPLY[%s] [%s] : SEQNUM=%d\n",
+			ifname, tx ? "TX" : "RX", ntoh16(icmph->un.echo.sequence)));
+	} else {
+		DHD_ERROR(("ICMP [%s] [%s] : TYPE=%d, CODE=%d\n",
+			ifname, tx ? "TX" : "RX", icmph->type, icmph->code));
+	}
+}
+#endif /* DHD_ICMP_DUMP */
 
 /* ----------------------------------------------------------------------------
  * Infrastructure code for sysfs interface support for DHD
@@ -15140,8 +15251,8 @@ dhd_write_file(const char *filepath, char *buf, int buf_len)
 	/* File is always created. */
 	fp = filp_open(filepath, O_RDWR | O_CREAT, 0664);
 	if (IS_ERR(fp)) {
-		DHD_ERROR(("%s: Couldn't open file '%s'\n",
-			__FUNCTION__, filepath));
+		DHD_ERROR(("%s: Couldn't open file '%s' err %ld\n",
+			__FUNCTION__, filepath, PTR_ERR(fp)));
 		ret = BCME_ERROR;
 	} else {
 		if (fp->f_mode & FMODE_WRITE) {
@@ -15216,3 +15327,93 @@ dhd_write_file_and_check(const char *filepath, char *buf, int buf_len)
 
 	return ret;
 }
+
+#if defined(DHD_HANG_SEND_UP_TEST)
+void
+dhd_make_hang_with_reason(struct net_device *dev, const char *string_num)
+{
+	dhd_info_t *dhd = NULL;
+	dhd_pub_t *dhdp = NULL;
+	uint reason = HANG_REASON_MAX;
+	char buf[WLC_IOCTL_SMLEN] = {0, };
+	uint32 fw_test_code = 0;
+	dhd = DHD_DEV_INFO(dev);
+
+	if (dhd) {
+		dhdp = &dhd->pub;
+	}
+
+	if (!dhd || !dhdp) {
+		return;
+	}
+
+	reason = (uint) bcm_strtoul(string_num, NULL, 0);
+	DHD_ERROR(("Enter %s, reason=0x%x\n", __FUNCTION__,  reason));
+
+	if (reason == 0) {
+		if (dhdp->req_hang_type) {
+			DHD_ERROR(("%s, Clear HANG test request 0x%x\n",
+				__FUNCTION__, dhdp->req_hang_type));
+			dhdp->req_hang_type = 0;
+			return;
+		} else {
+			DHD_ERROR(("%s, No requested HANG test\n", __FUNCTION__));
+			return;
+		}
+	} else if ((reason <= HANG_REASON_MASK) || (reason >= HANG_REASON_MAX)) {
+		DHD_ERROR(("Invalid HANG request, reason 0x%x\n", reason));
+		return;
+	}
+
+	if (dhdp->req_hang_type != 0) {
+		DHD_ERROR(("Already HANG requested for test\n"));
+		return;
+	}
+
+	switch (reason) {
+		case HANG_REASON_IOCTL_RESP_TIMEOUT:
+			DHD_ERROR(("Make HANG!!!: IOCTL response timeout(0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			fw_test_code = 102; /* resumed on timeour */
+			bcm_mkiovar("bus:disconnect", (void *)&fw_test_code, 4, buf, sizeof(buf));
+			dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, buf, sizeof(buf), TRUE, 0);
+			break;
+		case HANG_REASON_DONGLE_TRAP:
+			DHD_ERROR(("Make HANG!!!: Dongle trap (0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			fw_test_code = 99; /* dongle trap */
+			bcm_mkiovar("bus:disconnect", (void *)&fw_test_code, 4, buf, sizeof(buf));
+			dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, buf, sizeof(buf), TRUE, 0);
+			break;
+		case HANG_REASON_D3_ACK_TIMEOUT:
+			DHD_ERROR(("Make HANG!!!: D3 ACK timeout (0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			break;
+		case HANG_REASON_BUS_DOWN:
+			DHD_ERROR(("Make HANG!!!: BUS down(0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			break;
+		case HANG_REASON_PCIE_LINK_DOWN:
+		case HANG_REASON_MSGBUF_LIVELOCK:
+			dhdp->req_hang_type = 0;
+			DHD_ERROR(("Does not support requested HANG(0x%x)\n", reason));
+			break;
+		case HANG_REASON_P2P_IFACE_DEL_FAILURE:
+			DHD_ERROR(("Make HANG!!!: P2P inrerface delete failure(0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			break;
+		case HANG_REASON_HT_AVAIL_ERROR:
+			dhdp->req_hang_type = 0;
+			DHD_ERROR(("PCIe does not support requested HANG(0x%x)\n", reason));
+			break;
+		case HANG_REASON_PCIE_RC_LINK_UP_FAIL:
+			DHD_ERROR(("Make HANG!!!:Link Up(0x%x)\n", reason));
+			dhdp->req_hang_type = reason;
+			break;
+		default:
+			dhdp->req_hang_type = 0;
+			DHD_ERROR(("Unknown HANG request (0x%x)\n", reason));
+			break;
+	}
+}
+#endif /* DHD_HANG_SEND_UP_TEST */

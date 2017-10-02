@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 Vendor Extension Code
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wl_cfgvendor.c 668337 2016-11-03 01:32:05Z $
+ * $Id: wl_cfgvendor.c 681269 2017-01-25 10:59:55Z $
  */
 
 /*
@@ -744,6 +744,8 @@ wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 	uint8 flush = 0;
 	struct bssid_t *pbssid;
 
+	BCM_REFERENCE(dummy);
+
 	if (len < sizeof(*hotlist_params) || len >= WLC_IOCTL_MAXLEN) {
 		WL_ERR(("buffer length :%d wrong - bail out.\n", len));
 		return -EINVAL;
@@ -763,14 +765,14 @@ wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 	nla_for_each_attr(iter, data, len, tmp2) {
 		type = nla_type(iter);
 		switch (type) {
-			case GSCAN_ATTRIBUTE_HOTLIST_BSSIDS:
-				pbssid = hotlist_params->bssid;
-				nla_for_each_nested(outer, iter, tmp) {
-					nla_for_each_nested(inner, outer, tmp1) {
-						type = nla_type(inner);
+		case GSCAN_ATTRIBUTE_HOTLIST_BSSIDS:
+			pbssid = hotlist_params->bssid;
+			nla_for_each_nested(outer, iter, tmp) {
+				nla_for_each_nested(inner, outer, tmp1) {
+					type = nla_type(inner);
 
-						switch (type) {
-							case GSCAN_ATTRIBUTE_BSSID:
+					switch (type) {
+					case GSCAN_ATTRIBUTE_BSSID:
 						if (nla_len(inner) != sizeof(pbssid[j].macaddr)) {
 							WL_ERR(("type:%d length:%d not matching.\n",
 								type, nla_len(inner)));
@@ -781,18 +783,18 @@ wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 							&(pbssid[j].macaddr),
 							nla_data(inner),
 							sizeof(pbssid[j].macaddr));
-								break;
-							case GSCAN_ATTRIBUTE_RSSI_LOW:
+						break;
+					case GSCAN_ATTRIBUTE_RSSI_LOW:
 						if (nla_len(inner) != sizeof(uint8)) {
 							WL_ERR(("type:%d length:%d not matching.\n",
 								type, nla_len(inner)));
 							err = -EINVAL;
 							goto exit;
 						}
-								pbssid[j].rssi_reporting_threshold =
-								         (int8) nla_get_u8(inner);
-								break;
-							case GSCAN_ATTRIBUTE_RSSI_HIGH:
+						pbssid[j].rssi_reporting_threshold =
+							(int8)nla_get_u8(inner);
+						break;
+					case GSCAN_ATTRIBUTE_RSSI_HIGH:
 						if (nla_len(inner) != sizeof(uint8)) {
 							WL_ERR(("type:%d length:%d not matching.\n",
 								type, nla_len(inner)));
@@ -800,30 +802,30 @@ wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 							goto exit;
 						}
 						dummy = (int8)nla_get_u8(inner);
-								break;
-							default:
+						break;
+					default:
 						WL_ERR(("ATTR unknown %d\n", type));
 						err = -EINVAL;
 						goto exit;
-						}
 					}
+				}
 				if (++j >= PFN_SWC_MAX_NUM_APS) {
 					WL_ERR(("cap hotlist max:%d\n", j));
 					break;
 				}
-				}
-				hotlist_params->nbssid = j;
-				break;
-			case GSCAN_ATTRIBUTE_HOTLIST_FLUSH:
+			}
+			hotlist_params->nbssid = j;
+			break;
+		case GSCAN_ATTRIBUTE_HOTLIST_FLUSH:
 			if (nla_len(iter) != sizeof(uint8)) {
 				WL_ERR(("type:%d length:%d not matching.\n",
 					type, nla_len(inner)));
 				err = -EINVAL;
 				goto exit;
 			}
-				flush = nla_get_u8(iter);
-				break;
-			case GSCAN_ATTRIBUTE_LOST_AP_SAMPLE_SIZE:
+			flush = nla_get_u8(iter);
+			break;
+		case GSCAN_ATTRIBUTE_LOST_AP_SAMPLE_SIZE:
 			if (nla_len(iter) != sizeof(uint32)) {
 				WL_ERR(("type:%d length:%d not matching.\n",
 					type, nla_len(inner)));
@@ -831,12 +833,12 @@ wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 				goto exit;
 			}
 			hotlist_params->lost_ap_window = (uint16)nla_get_u32(iter);
-				break;
-			default:
-				WL_ERR(("Unknown type %d\n", type));
+			break;
+		default:
+			WL_ERR(("Unknown type %d\n", type));
 			err = -EINVAL;
 			goto exit;
-			}
+		}
 
 	}
 
@@ -1192,14 +1194,14 @@ wl_cfgvendor_rtt_cancel_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 			}
 			target_cnt = nla_get_u8(iter);
 			if ((target_cnt > 0) && (target_cnt < RTT_MAX_TARGET_CNT)) {
-			mac_list = (struct ether_addr *)kzalloc(target_cnt * ETHER_ADDR_LEN,
-				GFP_KERNEL);
-			if (mac_list == NULL) {
-				WL_ERR(("failed to allocate mem for mac list\n"));
+				mac_list = (struct ether_addr *)kzalloc(target_cnt * ETHER_ADDR_LEN,
+					GFP_KERNEL);
+				if (mac_list == NULL) {
+					WL_ERR(("failed to allocate mem for mac list\n"));
 					err = -EINVAL;
-				goto exit;
-			}
-			mac_addr = &mac_list[0];
+					goto exit;
+				}
+				mac_addr = &mac_list[0];
 			} else {
 				goto cancel;
 			}
@@ -1439,7 +1441,7 @@ wl_cfgvendor_apf_set_filter(struct wiphy *wiphy,
 				 * is not already initialized.
 				 */
 				if (nla_len(iter) == sizeof(uint32) && !program_len) {
-				program_len = nla_get_u32(iter);
+					program_len = nla_get_u32(iter);
 				} else {
 					ret = -EINVAL;
 					goto exit;
@@ -1610,19 +1612,22 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 	static char iovar_buf[WLC_IOCTL_MAXLEN];
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	int err = 0, i;
-	wifi_iface_stat *iface;
 	wifi_radio_stat *radio;
 	wifi_radio_stat_h radio_h;
 	wl_wme_cnt_t *wl_wme_cnt;
-	wl_cnt_v_le10_mcst_t *macstat_cnt;
+	wl_cnt_ge40mcst_v1_t *macstat_cnt;
 	wl_cnt_wlc_t *wlc_cnt;
 	scb_val_t scbval;
 	char *output = NULL;
 	char *outdata = NULL;
+	wifi_rate_stat_v1 *p_wifi_rate_stat_v1 = NULL;
 	wifi_rate_stat *p_wifi_rate_stat = NULL;
-	wifi_rate_stat_v2 *p_wifi_rate_stat_v2 = NULL;
 	uint total_len = 0;
-
+	wifi_iface_stat iface;
+#ifdef CONFIG_COMPAT
+	compat_wifi_iface_stat compat_iface;
+	int compat_task_state = is_compat_task();
+#endif /* CONFIG_COMPAT */
 
 	WL_INFORM(("%s: Enter \n", __func__));
 	RETURN_EIO_IF_NOT_UP(cfg);
@@ -1632,9 +1637,10 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 		WL_ERR(("%s: alloc failed\n", __func__));
 		return -ENOMEM;
 	}
-	bzero(&scbval, sizeof(scb_val_t));
-	bzero(outdata, WLC_IOCTL_MAXLEN);
-	bzero(iovar_buf, WLC_IOCTL_MAXLEN);
+
+	memset(&scbval, 0, sizeof(scb_val_t));
+	memset(outdata, 0, WLC_IOCTL_MAXLEN);
+	memset(iovar_buf, 0, WLC_IOCTL_MAXLEN);
 	output = outdata;
 
 	err = wldev_iovar_getbuf(bcmcfg_to_prmry_ndev(cfg), "radiostat", NULL, 0,
@@ -1660,7 +1666,7 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 	memcpy(output, &radio_h, sizeof(wifi_radio_stat_h));
 
 	output += sizeof(wifi_radio_stat_h);
-	output += (NUM_CHAN*sizeof(wifi_channel_stat));
+	output += (NUM_CHAN * sizeof(wifi_channel_stat));
 
 	err = wldev_iovar_getbuf(bcmcfg_to_prmry_ndev(cfg), "wme_counters", NULL, 0,
 		iovar_buf, WLC_IOCTL_MAXLEN, NULL);
@@ -1669,29 +1675,33 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 		goto exit;
 	}
 	wl_wme_cnt = (wl_wme_cnt_t *)iovar_buf;
-	iface = (wifi_iface_stat *)output;
 
-	iface->ac[WIFI_AC_VO].ac = WIFI_AC_VO;
-	iface->ac[WIFI_AC_VO].tx_mpdu = wl_wme_cnt->tx[AC_VO].packets;
-	iface->ac[WIFI_AC_VO].rx_mpdu = wl_wme_cnt->rx[AC_VO].packets;
-	iface->ac[WIFI_AC_VO].mpdu_lost = wl_wme_cnt->tx_failed[WIFI_AC_VO].packets;
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VO].ac, WIFI_AC_VO);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VO].tx_mpdu, wl_wme_cnt->tx[AC_VO].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VO].rx_mpdu, wl_wme_cnt->rx[AC_VO].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VO].mpdu_lost,
+		wl_wme_cnt->tx_failed[WIFI_AC_VO].packets);
 
-	iface->ac[WIFI_AC_VI].ac = WIFI_AC_VI;
-	iface->ac[WIFI_AC_VI].tx_mpdu = wl_wme_cnt->tx[AC_VI].packets;
-	iface->ac[WIFI_AC_VI].rx_mpdu = wl_wme_cnt->rx[AC_VI].packets;
-	iface->ac[WIFI_AC_VI].mpdu_lost = wl_wme_cnt->tx_failed[WIFI_AC_VI].packets;
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VI].ac, WIFI_AC_VI);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VI].tx_mpdu, wl_wme_cnt->tx[AC_VI].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VI].rx_mpdu, wl_wme_cnt->rx[AC_VI].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_VI].mpdu_lost,
+		wl_wme_cnt->tx_failed[WIFI_AC_VI].packets);
 
-	iface->ac[WIFI_AC_BE].ac = WIFI_AC_BE;
-	iface->ac[WIFI_AC_BE].tx_mpdu = wl_wme_cnt->tx[AC_BE].packets;
-	iface->ac[WIFI_AC_BE].rx_mpdu = wl_wme_cnt->rx[AC_BE].packets;
-	iface->ac[WIFI_AC_BE].mpdu_lost = wl_wme_cnt->tx_failed[WIFI_AC_BE].packets;
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BE].ac, WIFI_AC_BE);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BE].tx_mpdu, wl_wme_cnt->tx[AC_BE].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BE].rx_mpdu, wl_wme_cnt->rx[AC_BE].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BE].mpdu_lost,
+		wl_wme_cnt->tx_failed[WIFI_AC_BE].packets);
 
-	iface->ac[WIFI_AC_BK].ac = WIFI_AC_BK;
-	iface->ac[WIFI_AC_BK].tx_mpdu = wl_wme_cnt->tx[AC_BK].packets;
-	iface->ac[WIFI_AC_BK].rx_mpdu = wl_wme_cnt->rx[AC_BK].packets;
-	iface->ac[WIFI_AC_BK].mpdu_lost = wl_wme_cnt->tx_failed[WIFI_AC_BK].packets;
-	bzero(iovar_buf, WLC_IOCTL_MAXLEN);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BK].ac, WIFI_AC_BK);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BK].tx_mpdu, wl_wme_cnt->tx[AC_BK].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BK].rx_mpdu, wl_wme_cnt->rx[AC_BK].packets);
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BK].mpdu_lost,
+		wl_wme_cnt->tx_failed[WIFI_AC_BK].packets);
 
+
+	memset(iovar_buf, 0, WLC_IOCTL_MAXLEN);
 	err = wldev_iovar_getbuf(bcmcfg_to_prmry_ndev(cfg), "counters", NULL, 0,
 		iovar_buf, WLC_IOCTL_MAXLEN, NULL);
 	if (unlikely(err)) {
@@ -1699,10 +1709,12 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 		goto exit;
 	}
 
+	CHK_CNTBUF_DATALEN(iovar_buf, WLC_IOCTL_MAXLEN);
 	/* Translate traditional (ver <= 10) counters struct to new xtlv type struct */
-	err = wl_cntbuf_to_xtlv_format(NULL, iovar_buf, WL_CNTBUF_MAX_SIZE, 0);
+	err = wl_cntbuf_to_xtlv_format(NULL, iovar_buf, WLC_IOCTL_MAXLEN, 0);
 	if (err != BCME_OK) {
-		WL_ERR(("%s wl_cntbuf_to_xtlv_format ERR %d\n",  __FUNCTION__, err));
+		WL_ERR(("%s wl_cntbuf_to_xtlv_format ERR %d\n",
+			__FUNCTION__, err));
 		goto exit;
 	}
 
@@ -1712,7 +1724,7 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 		goto exit;
 	}
 
-	iface->ac[WIFI_AC_BE].retries = wlc_cnt->txretry;
+	COMPAT_ASSIGN_VALUE(iface, ac[WIFI_AC_BE].retries, wlc_cnt->txretry);
 
 	if ((macstat_cnt = bcm_get_data_from_xtlv_buf(((wl_cnt_info_t *)iovar_buf)->data,
 			((wl_cnt_info_t *)iovar_buf)->datalen,
@@ -1720,7 +1732,7 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 			BCM_XTLV_OPTION_ALIGN32)) == NULL) {
 		macstat_cnt = bcm_get_data_from_xtlv_buf(((wl_cnt_info_t *)iovar_buf)->data,
 				((wl_cnt_info_t *)iovar_buf)->datalen,
-				WL_CNT_XTLV_LT40_UCODE_V1, NULL,
+				WL_CNT_XTLV_GE40_UCODE_V1, NULL,
 				BCM_XTLV_OPTION_ALIGN32);
 	}
 
@@ -1730,70 +1742,83 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 		goto exit;
 	}
 
-	iface->beacon_rx = macstat_cnt->rxbeaconmbss;
-
 	err = wldev_get_rssi(bcmcfg_to_prmry_ndev(cfg), &scbval);
 	if (unlikely(err)) {
 		WL_ERR(("get_rssi error (%d)\n", err));
 		goto exit;
 	}
-	iface->rssi_mgmt = scbval.val;
 
-	iface->num_peers = NUM_PEER;
-	iface->peer_info->num_rate = NUM_RATE;
+	COMPAT_ASSIGN_VALUE(iface, beacon_rx, macstat_cnt->rxbeaconmbss);
+	COMPAT_ASSIGN_VALUE(iface, rssi_mgmt, scbval.val);
+	COMPAT_ASSIGN_VALUE(iface, num_peers, NUM_PEER);
+	COMPAT_ASSIGN_VALUE(iface, peer_info->num_rate, NUM_RATE);
 
-	bzero(iovar_buf, WLC_IOCTL_MAXLEN);
+#ifdef CONFIG_COMPAT
+	if (compat_task_state) {
+		memcpy(output, &compat_iface, sizeof(compat_iface));
+		output += (sizeof(compat_iface) - sizeof(wifi_rate_stat));
+	} else
+#endif /* CONFIG_COMPAT */
+	{
+		memcpy(output, &iface, sizeof(iface));
+		output += (sizeof(iface) - sizeof(wifi_rate_stat));
+	}
 
-	output = (char *) &(iface->peer_info->num_rate);
-	output += sizeof(iface->peer_info->num_rate);
-
+	memset(iovar_buf, 0, WLC_IOCTL_MAXLEN);
 	err = wldev_iovar_getbuf(bcmcfg_to_prmry_ndev(cfg), "ratestat", NULL, 0,
 		iovar_buf, WLC_IOCTL_MAXLEN, NULL);
 	if (err != BCME_OK && err != BCME_UNSUPPORTED) {
-		WL_ERR(("error (%d) - size = %zu\n", err, NUM_RATE*sizeof(wifi_rate_stat_v2)));
+		WL_ERR(("error (%d) - size = %zu\n", err, NUM_RATE*sizeof(wifi_rate_stat)));
 		goto exit;
 	}
 	for (i = 0; i < NUM_RATE; i++) {
-
-		p_wifi_rate_stat_v2 =
-			(wifi_rate_stat_v2 *)(iovar_buf + i*sizeof(wifi_rate_stat_v2));
-
-		/* transform wifi_rate_stat_v2 to wifi_rate_stat */
-		p_wifi_rate_stat = (wifi_rate_stat *)output;
-		p_wifi_rate_stat->rate.preamble = p_wifi_rate_stat_v2->rate.preamble;
-		p_wifi_rate_stat->rate.nss = p_wifi_rate_stat_v2->rate.nss;
-		p_wifi_rate_stat->rate.bw = p_wifi_rate_stat_v2->rate.bw;
-		p_wifi_rate_stat->rate.rateMcsIdx = p_wifi_rate_stat_v2->rate.rateMcsIdx;
-		p_wifi_rate_stat->rate.reserved = p_wifi_rate_stat_v2->rate.reserved;
-		p_wifi_rate_stat->rate.bitrate = p_wifi_rate_stat_v2->rate.bitrate;
-		p_wifi_rate_stat->tx_mpdu = p_wifi_rate_stat_v2->tx_mpdu;
-		p_wifi_rate_stat->rx_mpdu = p_wifi_rate_stat_v2->rx_mpdu;
-		p_wifi_rate_stat->mpdu_lost = p_wifi_rate_stat_v2->mpdu_lost;
-		p_wifi_rate_stat->retries = p_wifi_rate_stat_v2->retries;
-		p_wifi_rate_stat->retries_short = p_wifi_rate_stat_v2->retries_short;
-		p_wifi_rate_stat->retries_long = p_wifi_rate_stat_v2->retries_long;
-
-		output = (char *) &(p_wifi_rate_stat->retries_long);
-		output += sizeof(p_wifi_rate_stat->retries_long);
+		p_wifi_rate_stat =
+			(wifi_rate_stat *)(iovar_buf + i*sizeof(wifi_rate_stat));
+		p_wifi_rate_stat_v1 = (wifi_rate_stat_v1 *)output;
+		p_wifi_rate_stat_v1->rate.preamble = p_wifi_rate_stat->rate.preamble;
+		p_wifi_rate_stat_v1->rate.nss = p_wifi_rate_stat->rate.nss;
+		p_wifi_rate_stat_v1->rate.bw = p_wifi_rate_stat->rate.bw;
+		p_wifi_rate_stat_v1->rate.rateMcsIdx = p_wifi_rate_stat->rate.rateMcsIdx;
+		p_wifi_rate_stat_v1->rate.reserved = p_wifi_rate_stat->rate.reserved;
+		p_wifi_rate_stat_v1->rate.bitrate = p_wifi_rate_stat->rate.bitrate;
+		p_wifi_rate_stat_v1->tx_mpdu = p_wifi_rate_stat->tx_mpdu;
+		p_wifi_rate_stat_v1->rx_mpdu = p_wifi_rate_stat->rx_mpdu;
+		p_wifi_rate_stat_v1->mpdu_lost = p_wifi_rate_stat->mpdu_lost;
+		p_wifi_rate_stat_v1->retries = p_wifi_rate_stat->retries;
+		p_wifi_rate_stat_v1->retries_short = p_wifi_rate_stat->retries_short;
+		p_wifi_rate_stat_v1->retries_long = p_wifi_rate_stat->retries_long;
+		output = (char *) &(p_wifi_rate_stat_v1->retries_long);
+		output += sizeof(p_wifi_rate_stat_v1->retries_long);
 	}
+
 	total_len = sizeof(wifi_radio_stat_h) +
-		NUM_CHAN*sizeof(wifi_channel_stat) +
-		sizeof(wifi_iface_stat)-sizeof(wifi_peer_info) +
-		NUM_PEER*(sizeof(wifi_peer_info)-sizeof(wifi_rate_stat) +
-		NUM_RATE*sizeof(wifi_rate_stat));
+		NUM_CHAN * sizeof(wifi_channel_stat);
+
+#ifdef CONFIG_COMPAT
+	if (compat_task_state) {
+		total_len += sizeof(compat_wifi_iface_stat);
+	} else
+#endif /* CONFIG_COMPAT */
+	{
+		total_len += sizeof(wifi_iface_stat);
+	}
+
+	total_len = total_len - sizeof(wifi_peer_info) +
+		NUM_PEER * (sizeof(wifi_peer_info) - sizeof(wifi_rate_stat_v1) +
+			NUM_RATE * sizeof(wifi_rate_stat_v1));
 
 	if (total_len > WLC_IOCTL_MAXLEN) {
 		WL_ERR(("Error! total_len:%d is unexpected value\n", total_len));
 		err = BCME_BADLEN;
 		goto exit;
 	}
-
 	err =  wl_cfgvendor_send_cmd_reply(wiphy, bcmcfg_to_prmry_ndev(cfg),
 		outdata,
 		total_len);
 
 	if (unlikely(err))
 		WL_ERR(("Vendor Command reply failed ret:%d \n", err));
+
 exit:
 	if (outdata) {
 		kfree(outdata);

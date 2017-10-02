@@ -139,9 +139,6 @@ DHDCFLAGS += -DCUSTOM_KEEP_ALIVE_SETTING=30000
 # For special PNO Event keep wake lock for 10sec
 DHDCFLAGS += -DCUSTOM_PNO_EVENT_LOCK_xTIME=10
 
-# For Passing all multicast packets to host when not in suspend mode.
-# DHDCFLAGS += -DPASS_ALL_MCAST_PKTS
-
 # Early suspend
 DHDCFLAGS += -DDHD_USE_EARLYSUSPEND
 
@@ -202,7 +199,31 @@ DHDCFLAGS += -DUSE_WFA_CERT_CONF
 
 # Customer scan timeout setting
 DHDCFLAGS += -DCUSTOMER_SCAN_TIMEOUT_SETTING
+
+# Enable HANG event test private command
+DHDCFLAGS += -DSUPPORT_TRIGGER_HANG_EVENT
+
+# Android Version Check from Platform source
+CANDIDATE_VERSION_PATH := ./../../build/core ../../../../../../build/core out
+FOUND_VERSION_PATH := $(foreach dir,$(CANDIDATE_VERSION_PATH), $(wildcard $(dir)/version_defaults.mk))
+FOUND_VERSION_PATH := $(word 1, $(FOUND_VERSION_PATH))
+ifeq ($(FOUND_VERSION_PATH),)
+$(warning Not found Android version file. Set as Legacy mode)
+DHDCFLAGS += -DDHD_LEGACY_FILE_PATH
+DHDCFLAGS += -DDHD_DISABLE_ANDROID_FEATURE_SET
+else
+# Extract version string and get major number
+ANDROID_PLATFORM_VERSION := $(shell grep "PLATFORM_VERSION := " $(FOUND_VERSION_PATH) | cut -d "=" -f 2 | cut -d "." -f 1 | sed 's/ //g')
+$(warning Android Platform Version : $(ANDROID_PLATFORM_VERSION))
+# If Android version lower than 7(Nougat) => Use Legacy File path
+ifeq ($(shell expr $(ANDROID_PLATFORM_VERSION) \< 7),1)
+DHDCFLAGS += -DDHD_LEGACY_FILE_PATH
+DHDCFLAGS += -DDHD_DISABLE_ANDROID_FEATURE_SET
+$(warning Will be use Legacy file path)
+else
 DHDCFLAGS += -DDHD_SET_COUNTRY_SUPPORT
+endif
+endif
 
 ##############################
 # Android Platform Definition
@@ -611,8 +632,8 @@ ifneq ($(CONFIG_MACH_UNIVERSAL7420),)
 DHDCFLAGS += -DDHD_OF_SUPPORT
 DHDCFLAGS += -DBCMPCIE_OOB_HOST_WAKE
 # For enable temperature throttling feature at BCM4358A3
-DHDCFLAGS += -DENABLE_TEMP_THROTTLING
-DHDCFLAGS += -DTEMP_THROTTLE_CONTROL_BIT=0xD
+# DHDCFLAGS += -DENABLE_TEMP_THROTTLING
+# DHDCFLAGS += -DTEMP_THROTTLE_CONTROL_BIT=0xD
 endif
 ifneq ($(CONFIG_MACH_UNIVERSAL5433),)
 DHDCFLAGS += -DDHD_OF_SUPPORT

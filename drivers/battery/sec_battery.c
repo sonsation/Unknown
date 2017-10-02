@@ -280,7 +280,7 @@ static int sec_bat_set_charge(
 			battery->charging_next_time =
 				battery->pdata->charging_reset_time;
 		}
-		if (battery->siop_level < 100)
+		if (battery->siop_level < 100 && !battery->lcd_on_time)
 			battery->lcd_on_time = ts.tv_sec;
 	} else {
 		val.intval = POWER_SUPPLY_TYPE_BATTERY;
@@ -3633,6 +3633,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 		val.intval = 0;
 		psy_do_property(battery->pdata->charger_name, set,
 			POWER_SUPPLY_PROP_CURRENT_NOW, val);
+		sec_bat_set_charge(battery, false);
 
 		dev_info(battery->dev,
 			"%s:slate mode on\n",__func__);

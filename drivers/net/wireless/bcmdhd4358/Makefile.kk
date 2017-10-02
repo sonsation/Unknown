@@ -55,7 +55,8 @@ ifeq ($(BUS_IFACE_PCIE),y)
 	DHDCFLAGS += -DDHD_PKTID_AUDIT_ENABLED
 	# Extended HANG event with reason codes
 	DHDCFALGS += -DDHD_USE_EXTENDED_HANG_REASON
-
+	# Enable wakelock for legacy scan
+	DHDCFLAGS += -DDHD_USE_SCAN_WAKELOCK
 endif
 
 #################
@@ -198,6 +199,9 @@ DHDCFLAGS += -DUSE_WFA_CERT_CONF
 
 # Customer scan timeout setting
 DHDCFLAGS += -DCUSTOMER_SCAN_TIMEOUT_SETTING
+
+# Enable HANG event test private command
+DHDCFLAGS += -DSUPPORT_TRIGGER_HANG_EVENT
 
 # Android Version Check from Platform source
 CANDIDATE_VERSION_PATH := ./../../build/core ../../../../../../build/core out
@@ -613,8 +617,8 @@ ifneq ($(CONFIG_MACH_UNIVERSAL7420),)
 DHDCFLAGS += -DDHD_OF_SUPPORT
 DHDCFLAGS += -DBCMPCIE_OOB_HOST_WAKE
 # For enable temperature throttling feature at BCM4358A3
-DHDCFLAGS += -DENABLE_TEMP_THROTTLING
-DHDCFLAGS += -DTEMP_THROTTLE_CONTROL_BIT=0xD
+# DHDCFLAGS += -DENABLE_TEMP_THROTTLING
+# DHDCFLAGS += -DTEMP_THROTTLE_CONTROL_BIT=0xD
 endif
 ifneq ($(CONFIG_MACH_UNIVERSAL5433),)
 DHDCFLAGS += -DDHD_OF_SUPPORT

@@ -1009,8 +1009,8 @@ static int __sdfat_revalidate_common(struct dentry *dentry)
 {
 	int ret = 1;
 	spin_lock(&dentry->d_lock);
-	if (!__check_dstate_locked(dentry) &&
-		(dentry->d_time != dentry->d_parent->d_inode->i_version)) {
+	if ((!dentry->d_inode) && (!__check_dstate_locked(dentry) &&
+		(dentry->d_time != dentry->d_parent->d_inode->i_version))) {
 		ret = 0;
 	}
 	spin_unlock(&dentry->d_lock);
@@ -2856,35 +2856,8 @@ out:
 	}
 	sdfat_debug_check_clusters(inode);
 
-	if (SDFAT_I(inode)->i_size_aligned > i_size_read(inode)) {
+	if (SDFAT_I(inode)->i_size_aligned > i_size_read(inode))
 		SDFAT_I(inode)->i_size_aligned = aligned_size;
-
-#if 0
-		if ((inode->i_mapping->a_ops != &sdfat_da_aops) && \
-			(SDFAT_I(inode)->i_size_aligned & (blocksize - 1))) {
-		   /* Delayed alloc. is OFF then align-up
-		    *
-		    * Note: This doesn't affect the operation of the FS
-		    * (because i_size_aligned is meaningless w/o DA)
-		    *
-		    * We want to keep the condition of 'i_size or 
-		    * i_size_ondisk <= i_size_aligned'
-		    *
-		    * If we truncate and write small bytes in the same block,
-		    * i_size and i_size_ondisk will be increased 
-		    * (after write_begin)
-		    * But i_size_aligned will be same (old i_size) because 
-		    * no new block added.
-		    *
-		    * Therefore, w/o this aligning-up
-		    * i_size_aligned can be smaller than 
-		    * i_size_ondisk in those cases.
-		    */
-			SDFAT_I(inode)->i_size_aligned |= (blocksize-1);
-			SDFAT_I(inode)->i_size_aligned++;
-		}
-#endif
-	}
 
 	/* After truncation :
 	 * 1) Delayed allocation is OFF

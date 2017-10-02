@@ -1,7 +1,19 @@
-BCM4358 DHD 1.47.52 for Android Lollipop T/Zero Project
+BCM4358 DHD 1.47.56 for Android T/Zero Project
 Notes: 
 - Must sync up DHD and FW for additional message to eliminate spurious D0 interrupt.
 . additional message to eliminate spurious D0 interrupt is enabled from DHD 1.47.20 and FW 7.112.20.5/7.112.20.2(IBSS) 
+
+DHD 1.47.56 - 2017.01.24
+Others
+ - CSP:1103989 Unnecessary mpc setting code is removed
+ - CSP:1115484 Fixed Build error with GSCAN
+ - CSP:1118306 Introduce a new wakelock for legacy SCAN
+ - CSP:1118325 Disabled Temperature throttling feature
+ - CSP:1118451 Prevent to duplicate connection request without disconnection
+ - CSP:1120070 Added recovery method when reading shared memory is failed
+ - Enabled "SUPPORT_TRIGGER_HANG_EVENT" for hang test
+ - Fixed vulnerability issues
+
 
 DHD 1.47.52 - 2016.12.30
 Others
@@ -199,7 +211,7 @@ Others
 
 2015.9.4 - DHD 1.47.37
 Kernel Panic
- - CSP:931392 Added Debug logs to trace RC?™s configuration register status
+ - CSP:931392 Added Debug logs to trace RCâ€™s configuration register status
 
 Others
  - CSP:955172 Disabled forward TDLS frame to supplicant when WFD disabled

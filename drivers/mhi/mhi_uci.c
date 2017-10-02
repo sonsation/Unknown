@@ -381,7 +381,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *buf,
 				chan);
 	}
 
-	mhi_uci_dump_log(UCI_DBG_ERROR, "uci_read: ", bytes_copied, buf);
+	mhi_uci_dump_log(UCI_DBG_ERROR, "uci_read: ", bytes_copied, pkt_loc + addr_offset);
 
 	/* We finished with this buffer, map it back */
 	if (*bytes_pending == 0) {
@@ -421,8 +421,6 @@ static ssize_t mhi_uci_client_write(struct file *file,
 	int ret_val = 0;
 	int wait_ret = 0;
 	u32 chan = 0xFFFFFFFF;
-
-	mhi_uci_dump_log(UCI_DBG_ERROR, "uci_write: ", count, buf);
 
 	if (NULL == file || NULL == buf ||
 			0 == count || NULL == file->private_data)
@@ -654,6 +652,9 @@ int mhi_uci_send_packet(mhi_client_handle **client_handle,
 
 			if (0 != memcpy_result)
 				goto error_memcpy;
+
+			if(i == 0)
+				mhi_uci_dump_log(UCI_DBG_ERROR, "uci_write: ", data_to_insert_now, data_loc);
 		} else {
 			data_loc = buf;
 		}

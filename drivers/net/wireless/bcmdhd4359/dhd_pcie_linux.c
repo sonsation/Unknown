@@ -1,7 +1,7 @@
 /*
  * Linux DHD Bus Module for PCIE
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_pcie_linux.c 666716 2016-10-24 10:55:43Z $
+ * $Id: dhd_pcie_linux.c 683104 2017-02-06 06:46:17Z $
  */
 
 
@@ -367,6 +367,9 @@ static int dhdpcie_resume_host_dev(dhd_bus_t *bus)
 #ifdef CONFIG_ARCH_MSM
 	bcmerror = dhdpcie_start_host_pcieclock(bus);
 #endif /* CONFIG_ARCH_MSM */
+#ifdef CONFIG_ARCH_TEGRA
+	bcmerror = tegra_pcie_pm_resume();
+#endif /* CONFIG_ARCH_TEGRA */
 	if (bcmerror < 0) {
 		DHD_ERROR(("%s: PCIe RC resume failed!!! (%d)\n",
 			__FUNCTION__, bcmerror));
@@ -393,6 +396,9 @@ static int dhdpcie_suspend_host_dev(dhd_bus_t *bus)
 #ifdef CONFIG_ARCH_MSM
 	bcmerror = dhdpcie_stop_host_pcieclock(bus);
 #endif	/* CONFIG_ARCH_MSM */
+#ifdef CONFIG_ARCH_TEGRA
+	bcmerror = tegra_pcie_pm_suspend();
+#endif /* CONFIG_ARCH_TEGRA */
 	return bcmerror;
 }
 
@@ -421,7 +427,12 @@ int dhdpcie_pci_suspend_resume(dhd_bus_t *bus, bool state)
 		dhdpcie_pme_active(bus->osh, state);
 #endif /* !BCMPCIE_OOB_HOST_WAKE */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
+#if defined(DHD_HANG_SEND_UP_TEST)
+		if (bus->is_linkdown ||
+			bus->dhd->req_hang_type == HANG_REASON_PCIE_RC_LINK_UP_FAIL) {
+#else /* DHD_HANG_SEND_UP_TEST */
 		if (bus->is_linkdown) {
+#endif /* DHD_HANG_SEND_UP_TEST */
 			bus->dhd->hang_reason = HANG_REASON_PCIE_RC_LINK_UP_FAIL;
 			dhd_os_send_hang_message(bus->dhd);
 		}
@@ -851,6 +862,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 		exynos_pcie_register_event(&bus->pcie_event);
 #endif /* CONFIG_SOC_EXYNOS8890 */
 #endif /* EXYNOS_PCIE_LINKDOWN_RECOVERY */
+		bus->read_shm_fail = false;
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 
 		if (bus->intr) {

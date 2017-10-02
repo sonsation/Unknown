@@ -3896,6 +3896,8 @@ static DEFINE_RAW_SPINLOCK(hmp_boost_lock);
 static DEFINE_RAW_SPINLOCK(hmp_semiboost_lock);
 static DEFINE_RAW_SPINLOCK(hmp_sysfs_lock);
 
+static struct hmp_domain *hmp_domain_cache[NR_CPUS] = { };
+
 #define BOOT_BOOST_DURATION 40000000 /* microseconds */
 #define YIELD_CORRECTION_TIME 10000000 /* nanoseconds */
 
@@ -3955,8 +3957,13 @@ static inline struct hmp_domain *hmp_slower_domain(int cpu)
 {
 	struct list_head *pos;
 
-	pos = &hmp_cpu_domain(cpu)->hmp_domains;
-	return list_entry(pos->next, struct hmp_domain, hmp_domains);
+	if (unlikely(hmp_domain_cache[cpu] == NULL))
+	{
+		pos = &hmp_cpu_domain(cpu)->hmp_domains;
+		hmp_domain_cache[cpu] = list_entry(pos->next, struct hmp_domain, hmp_domains);
+	}
+
+	return hmp_domain_cache[cpu];
 }
 
 /* Previous (faster) hmp_domain relative to cpu */
@@ -3964,8 +3971,13 @@ static inline struct hmp_domain *hmp_faster_domain(int cpu)
 {
 	struct list_head *pos;
 
-	pos = &hmp_cpu_domain(cpu)->hmp_domains;
-	return list_entry(pos->prev, struct hmp_domain, hmp_domains);
+	if (unlikely(hmp_domain_cache[cpu] == NULL))
+	{
+		pos = &hmp_cpu_domain(cpu)->hmp_domains;
+		hmp_domain_cache[cpu] = list_entry(pos->prev, struct hmp_domain, hmp_domains);
+	}
+
+	return hmp_domain_cache[cpu];
 }
 
 /*
@@ -3996,7 +4008,7 @@ static inline unsigned int hmp_select_faster_cpu(struct task_struct *tsk,
 static inline unsigned int hmp_select_slower_cpu(struct task_struct *tsk,
 							int cpu)
 {
-	int lowest_cpu=0;
+	int lowest_cpu = 0;
 	struct hmp_domain *hmp;
 	__always_unused int lowest_ratio;
 
@@ -8346,6 +8358,10 @@ void print_cfs_stats(struct seq_file *m, int cpu)
 
 __init void init_sched_fair_class(void)
 {
+#ifdef CONFIG_SCHED_HMP
+	int i;
+#endif
+
 #ifdef CONFIG_SMP
 	open_softirq(SCHED_SOFTIRQ, run_rebalance_domains);
 
@@ -8357,6 +8373,11 @@ __init void init_sched_fair_class(void)
 
 #ifdef CONFIG_SCHED_HMP
 	hmp_cpu_mask_setup();
+
+	// setup hmp domain cache
+	for (i = 0; i < NR_CPUS; i++) {
+		hmp_domain_cache[i] = NULL;
+	}
 #endif
 #endif /* SMP */
 

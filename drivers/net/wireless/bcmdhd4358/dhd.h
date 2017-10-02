@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 675850 2016-12-19 04:41:07Z $
+ * $Id: dhd.h 680234 2017-01-19 04:48:17Z $
  */
 
 /****************
@@ -188,7 +188,10 @@ enum dhd_dongledump_type {
 	DUMP_TYPE_SCAN_TIMEOUT,
 	DUMP_TYPE_SCAN_BUSY,
 	DUMP_TYPE_BY_SYSDUMP,
-	DUMP_TYPE_FOR_DEBUG
+	DUMP_TYPE_FOR_DEBUG,
+#ifdef SUPPORT_LINKDOWN_RECOVERY
+	DUMP_TYPE_READ_SHM_FAIL
+#endif /* SUPPORT_LINKDOWN_RECOVERY */
 };
 
 enum dhd_hang_reason {
@@ -202,7 +205,8 @@ enum dhd_hang_reason {
 	HANG_REASON_P2P_IFACE_DEL_FAILURE = 0x8007,
 	HANG_REASON_HT_AVAIL_ERROR = 0x8008,
 	HANG_REASON_PCIE_RC_LINK_UP_FAIL = 0x8009,
-	HANG_REASON_MAX = 0x800a
+	HANG_REASON_INVALID_EVENT_OR_DATA = 0x8806,
+	HANG_REASON_MAX = 0x8807
 };
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
@@ -272,7 +276,7 @@ enum {
 #define WIFI_FEATURE_MKEEP_ALIVE        0x100000    /* WiFi mkeep_alive			*/
 #define WIFI_FEATURE_CONFIG_NDO         0x200000    /* ND offload configure		*/
 #define WIFI_FEATURE_TX_TRANSMIT_POWER  0x400000    /* Capture Tx transmit power levels */
-#define WIFI_FEATURE_INVALID            0xFFFFFFFF  /* Invalid Feature                  */
+#define WIFI_FEATURE_INVALID            0xFFFFFFFF  /* Invalid Feature			*/
 
 #define MAX_FEATURE_SET_CONCURRRENT_GROUPS  3
 
@@ -782,7 +786,7 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 #ifdef DHD_USE_SCAN_WAKELOCK
 #ifdef DHD_DEBUG_SCAN_WAKELOCK
 #define PRINT_SCAN_CALL(str) printf("%s: %s %d\n", \
-			str, __FUNCTION__, __LINE__)
+	str, __FUNCTION__, __LINE__)
 #else
 #define PRINT_SCAN_CALL(str)
 #endif /* DHD_DEBUG_SCAN_WAKELOCK */

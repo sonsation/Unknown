@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_msgbuf.c 675074 2016-12-14 05:03:15Z $
+ * $Id: dhd_msgbuf.c 680234 2017-01-19 04:48:17Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -4416,7 +4416,11 @@ prot_get_src_addr(dhd_pub_t *dhd, msgbuf_ring_t * ring, uint16* available_len)
 	r_ptr = ring->ringstate->r_offset;
 	depth = ring->ringmem->max_item;
 
-	/* check for avail space */
+#ifdef SUPPORT_LINKDOWN_RECOVERY
+	if (w_ptr > ring->ringmem->max_item) {
+		dhd->bus->read_shm_fail = true;
+	}
+#endif /* SUPPORT_LINKDOWN_RECOVERY */
 	*available_len = READ_AVAIL_SPACE(w_ptr, r_ptr, depth);
 	if (*available_len == 0)
 		return NULL;

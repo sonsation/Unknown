@@ -14,6 +14,7 @@
 #include <linux/device.h>
 #include <linux/clk.h>
 #include <linux/clk-private.h>
+#include <linux/exynos-ss.h>
 #include <linux/pm_domain.h>
 #include <linux/sched.h>
 #include <linux/debugfs.h>
@@ -848,11 +849,15 @@ void exynos_sysmmu_tlb_invalidate(struct iommu_domain *domain, dma_addr_t start,
 				spin_unlock(&drvdata->lock);
 				TRACE_LOG_DEV(drvdata->sysmmu,
 					"Skip TLB invalidation %#x@%#x\n", size, start);
+					exynos_ss_printk("Skip TLB invalidation %s:  %#x@%#x\n",
+					dev_name(drvdata->sysmmu), size, start);
 				continue;
 			}
 
 			TRACE_LOG_DEV(drvdata->sysmmu,
 				"TLB invalidation %#x@%#x\n", size, start);
+			exynos_ss_printk("TLB invalidation %s: %#x@%#x\n",
+					dev_name(drvdata->sysmmu), size, start);
 
 			__master_clk_enable(drvdata);
 
