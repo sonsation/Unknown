@@ -356,16 +356,7 @@ on boot
     chown system system /sys/devices/system/cpu/cpu5/online
     chown system system /sys/devices/system/cpu/cpu6/online
     chown system system /sys/devices/system/cpu/cpu7/online
-
-    # GENTLE FAIR SLEEPERS
-    write /sys/kernel/sched/gentle_fair_sleepers 0
-
-    # ARCH POWER
-    write /sys/kernel/sched/arch_power 1
-
-    # Use more optimized nr_requests for UFS
-    write /sys/block/sda/queue/nr_requests 256
-
+ 
     # CPU Idle
     chown system system /sys/module/cpuidle_exynos64/parameters/enable_mask
 
