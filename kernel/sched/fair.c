@@ -3917,10 +3917,7 @@ static inline int hmp_boost(void)
 	unsigned long flags;
 
 	raw_spin_lock_irqsave(&hmp_boost_lock, flags);
-	if (hmp_boost_val || now < hmp_boostpulse_endtime)
-		ret = 1;
-	else
-		ret = 0;
+	ret = unlikely(hmp_boost_val || now < hmp_boostpulse_endtime);
 	raw_spin_unlock_irqrestore(&hmp_boost_lock, flags);
 
 	return ret;
@@ -3928,9 +3925,7 @@ static inline int hmp_boost(void)
 
 static inline int hmp_semiboost(void)
 {
-	if (hmp_semiboost_val)
-		return 1;
-	return 0;
+	return unlikely(hmp_semiboost_val != 0);
 }
 
 static unsigned int hmp_up_migration(int cpu, int *target_cpu, struct sched_entity *se);
@@ -3946,19 +3941,13 @@ static inline struct hmp_domain *hmp_smallest_domain(void)
 /* Check if cpu is in fastest hmp_domain */
 static inline unsigned int hmp_cpu_is_fastest(int cpu)
 {
-	struct list_head *pos;
-
-	pos = &hmp_cpu_domain(cpu)->hmp_domains;
-	return pos == hmp_domains.next;
+	return (cpu >= 4 && cpu < 8);
 }
 
 /* Check if cpu is in slowest hmp_domain */
 static inline unsigned int hmp_cpu_is_slowest(int cpu)
 {
-	struct list_head *pos;
-
-	pos = &hmp_cpu_domain(cpu)->hmp_domains;
-	return list_is_last(pos, &hmp_domains);
+	return (cpu >= 0 && cpu < 4);
 }
 
 /* Next (slower) hmp_domain relative to cpu */
@@ -3985,9 +3974,10 @@ static inline struct hmp_domain *hmp_faster_domain(int cpu)
 static inline unsigned int hmp_select_faster_cpu(struct task_struct *tsk,
 							int cpu)
 {
-	int lowest_cpu=NR_CPUS;
-	__always_unused int lowest_ratio;
+	int lowest_cpu = NR_CPUS;
 	struct hmp_domain *hmp;
+        __always_unused int lowest_ratio;
+ 
 	if (hmp_cpu_is_fastest(cpu))
 		hmp = hmp_cpu_domain(cpu);
 	else
@@ -4006,7 +3996,7 @@ static inline unsigned int hmp_select_faster_cpu(struct task_struct *tsk,
 static inline unsigned int hmp_select_slower_cpu(struct task_struct *tsk,
 							int cpu)
 {
-	int lowest_cpu=NR_CPUS;
+	int lowest_cpu=0;
 	struct hmp_domain *hmp;
 	__always_unused int lowest_ratio;
 
@@ -8367,7 +8357,6 @@ __init void init_sched_fair_class(void)
 
 #ifdef CONFIG_SCHED_HMP
 	hmp_cpu_mask_setup();
-
 #endif
 #endif /* SMP */
 
