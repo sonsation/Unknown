@@ -17,10 +17,14 @@
 #include <linux/blkdev.h>
 #include <linux/blk_types.h>
 #include <linux/elevator.h>
-#include <linux/state_notifier.h>
+#include <linux/fb.h>
+#include <linux/powersuspend.h>
+
 
 #define NOOP_IOSCHED "noop"
 #define RESTORE_DELAY_MS (5000)
+
+static bool suspended=false;
 
 struct req_queue_data {
 	struct list_head list;
@@ -34,8 +38,6 @@ static DEFINE_SPINLOCK(init_lock);
 static struct req_queue_data req_queues = {
 	.list = LIST_HEAD_INIT(req_queues.list),
 };
-
-static struct notifier_block notif;
 
 static void change_elevator(struct req_queue_data *r, bool use_noop)
 {
@@ -62,11 +64,27 @@ static void change_all_elevators(struct list_head *head, bool use_noop)
 		change_elevator(r, use_noop);
 }
 
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
+static void scheduler_early_suspend(struct power_suspend *handler)
 {
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
+	suspended = true;
+	return;
+}
+
+static void scheduler_late_resume(struct power_suspend *handler)
+{
+	suspended = false;
+	return;
+}
+
+static struct power_suspend scheduler_suspend = {
+	.suspend = scheduler_early_suspend,
+	.resume = scheduler_late_resume,
+};
+
+static int scheduler_handler()
+{
+	switch (suspended) { 
+		case false:
 			/*
 			 * Switch back from noop to the original iosched after a delay
 			 * when the screen is turned on.
@@ -74,7 +92,7 @@ static int state_notifier_callback(struct notifier_block *this,
 			queue_delayed_work(system_power_efficient_wq, &restore_prev,
 				msecs_to_jiffies(RESTORE_DELAY_MS));
 			break;
-		case STATE_NOTIFIER_SUSPEND:
+                case true:
 			/*
 			 * Switch to noop when the screen turns off. Purposely block
 			 * the state notifier chain call in case weird things can happen
@@ -84,11 +102,13 @@ static int state_notifier_callback(struct notifier_block *this,
 				cancel_delayed_work_sync(&restore_prev);
 			change_all_elevators(&req_queues.list, true);
 			break;
-		default:
-			break;
+		default :
+			break; 
+
 	}
 
-	return NOTIFY_OK;
+	return 0;
+
 }
 
 static void restore_prev_fn(struct work_struct *work)
@@ -115,12 +135,12 @@ int init_iosched_switcher(struct request_queue *q)
 
 static int iosched_switcher_core_init(void)
 {
-	int ret = 0;
 
 	INIT_DELAYED_WORK(&restore_prev, restore_prev_fn);
-	notif.notifier_call = state_notifier_callback;
-	ret = state_register_client(&notif);
+	register_power_suspend(&scheduler_suspend);
+	scheduler_handler(); 
 
-	return ret;
+	return 0;
+
 }
 late_initcall(iosched_switcher_core_init);
