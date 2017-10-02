@@ -128,17 +128,10 @@ static struct apll_freq exynos7420_apll_freq_CA57[] = {
  * ASV group voltage table
  */
 static const unsigned int asv_voltage_7420_CA57[CPUFREQ_LEVEL_END_CA57] = {
-#ifdef CONFIG_EXYNOS7420_OVERCLOCK
-	1375000,	/* L0  2500 */
-	1325000,	/* L1  2400 */
-	1275000,	/* L2  2300 */
-	1225000,	/* L3  2200 */
-#else
 	1250000,	/* L0  2500 */
 	1250000,	/* L1  2400 */
 	1250000,	/* L2  2300 */
 	1250000,	/* L3  2200 */
-#endif
 	1175000,	/* L4  2100 */
 	1125000,	/* L5  2000 */
 	1081250,	/* L6  1900 */
@@ -191,17 +184,10 @@ static int exynos7420_region_bus_table_CA57[CPUFREQ_LEVEL_END_CA57][6] = {
 };
 #else
 static int exynos7420_bus_table_CA57[CPUFREQ_LEVEL_END_CA57] = {
-#ifdef CONFIG_EXYNOS7420_OVERCLOCK
-	1748000,		/* 2.5 GHz */
-	1748000,		/* 2.4 GHz */
-	1648000,		/* 2.3 GHz */
-	1648000,		/* 2.2 GHz */
-#else
 	1552000,		/* 2.5 GHz */
 	1552000,		/* 2.4 GHz */
 	1552000,		/* 2.3 GHz */
 	1552000,		/* 2.2 GHz */
-#endif
 	1552000,		/* 2.1 GHz */
 	1456000,		/* 2.0 GHz */
 	1264000,		/* 1.9 GHz */
