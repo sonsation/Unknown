@@ -11,6 +11,7 @@ import /init.${ro.zygote}.rc
 import /init.rilcommon.rc
 import /init.container.rc
 import /init.fac.rc
+import /init.service.sh
 import /init.unknown.rc
 
 on early-init
@@ -523,7 +524,7 @@ on post-fs-data
     # Fix the access permissions and group ownership for 'bt_config.conf'
     chmod 0660 /data/misc/bluedroid/bt_config.conf
     chown bluetooth net_bt_stack /data/misc/bluedroid/bt_config.conf
-    mkdir /data/misc/bluetooth 0770 bluetooth net_bt_stack
+    mkdir /data/misc/bluetooth 0770 system system
     mkdir /data/misc/keystore 0700 keystore keystore
     mkdir /data/misc/gatekeeper 0700 system system
     mkdir /data/misc/keychain 0771 system system
@@ -567,9 +568,6 @@ on post-fs-data
 
     mkdir /data/misc/profman 0770 system shell
 
-    #OTP
-    mkdir /data/otp 0700 system system
-	
     # NFC
     mkdir /data/nfc 0700 nfc nfc
     mkdir /data/nfc/param 0700 nfc nfc
