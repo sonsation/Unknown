@@ -418,8 +418,6 @@ on boot
 #MST HW Support
     setprop ro.mst.support 1
 
-    start sysinit
-
 on fs
     mount_all /fstab.samsungexynos7420
     setprop ro.crypto.fuse_sdcard true
@@ -756,14 +754,6 @@ service fingerprintd /system/bin/fingerprintd
 service watchdogd /sbin/watchdogd 10 20
     class core
     seclabel u:r:watchdogd:s0
-
-service sysinit /sbin/sysinit.sh
-    class late_start
-    user root
-    group root
-    seclabel u:r:init:s0
-    oneshot
-    disabled
 
 # on userdebug and eng builds, enable kgdb on the serial console
 on property:ro.debuggable=1

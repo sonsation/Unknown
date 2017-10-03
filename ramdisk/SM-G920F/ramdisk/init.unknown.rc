@@ -1,9 +1,26 @@
-on early-init
-    write /sys/block/sda/queue/iostats 0
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
-    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
+import /init.service.sh
 
 on property:sys.boot_completed=1
+
+    # Make sure governor sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+
+    # Make sure all the cpufreq sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+
+    # Set Governor
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
 
     # Min freq values
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 400000
@@ -22,14 +39,7 @@ on property:sys.boot_completed=1
     write /proc/sys/net/ipv4/tcp_congestion_control westwood
 
     # I/O management
+    write /sys/block/sda/queue/scheduler row	
     write /sys/block/sda/queue/rotational 0
-    write /sys/block/sda/queue/rq_affinity 2
-    write /sys/block/sda/queue/add_random 0
     write /sys/block/sda/queue/read_ahead_kb 128
-    write /sys/block/sda/bdi/min_ratio 5
-    write /sys/module/sync/parameters/fsync_enabled 0
-
-    # Disable Gentle Fair Sleepers
-    write /sys/kernel/sched/gentle_fair_sleepers 0
-
 
