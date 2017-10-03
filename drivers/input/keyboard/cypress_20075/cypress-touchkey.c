@@ -1068,11 +1068,11 @@ static irqreturn_t touchkey_interrupt(int irq, void *dev_id)
 		if (keycode_data[i]) {
 			input_report_key(tkey_i2c->input_dev, touchkey_keycode[i], (keycode_data[i] % 2));
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-			tk_debug_err(true, &tkey_i2c->client->dev, "keycode: %d %s, %#x %#x %d\n",
+			tk_debug_dbg(true, &tkey_i2c->client->dev, "keycode: %d %s, %#x %#x %d\n",
 					touchkey_keycode[i], (keycode_data[i] % 2) ? "PRESS" : "RELEASE",
 					tkey_i2c->fw_ver_ic, tkey_i2c->md_ver_ic, tkey_i2c->mc_data.cur_mode);
 #else
-			tk_debug_err(true, &tkey_i2c->client->dev, " %s, %#x %#x %d\n",
+			tk_debug_dbg(true, &tkey_i2c->client->dev, " %s, %#x %#x %d\n",
 					(keycode_data[i] % 2) ? "PRESS" : "RELEASE", tkey_i2c->fw_ver_ic,
 						tkey_i2c->md_ver_ic, tkey_i2c->mc_data.cur_mode);
 #endif
