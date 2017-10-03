@@ -1,9 +1,41 @@
 on early-init
-    write /sys/block/sda/queue/iostats 0
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
-    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
+    write /sys/block/sda/queue/scheduler noop
 
 on property:sys.boot_completed=1
+    # Set HMP
+    write /dev/cpuset/foreground/cpus 0-7
+    write /dev/cpuset/background/cpus 0
+    write /dev/cpuset/foreground/boost/cpus 4-7
+    write /dev/cpuset/system-background/cpus 0-3
+    write /dev/cpuset/invisible/cpus 0-3     
+
+    # Make sure governor sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+
+    # Make sure all the cpufreq sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+
+    # Make sure GPU control sys paths have the correct permissions
+    chown system system /sys/devices/14ac0000.mali/dvfs_governor
+    chmod 0664 /sys/devices/14ac0000.mali/dvfs_governor
+    chown system system /sys/devices/platform/gpusysfs/gpu_min_clock
+    chmod 0664 /sys/devices/platform/gpusysfs/gpu_min_clock
+    chown system system /sys/devices/platform/gpusysfs/gpu_max_clock
+    chmod 0664 /sys/devices/platform/gpusysfs/gpu_max_clock
+
+    # Set Governor
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
 
     # Min freq values
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 400000
@@ -22,14 +54,8 @@ on property:sys.boot_completed=1
     write /proc/sys/net/ipv4/tcp_congestion_control westwood
 
     # I/O management
+    write /sys/block/sda/queue/scheduler row	
     write /sys/block/sda/queue/rotational 0
-    write /sys/block/sda/queue/rq_affinity 2
-    write /sys/block/sda/queue/add_random 0
     write /sys/block/sda/queue/read_ahead_kb 128
-    write /sys/block/sda/bdi/min_ratio 5
-    write /sys/module/sync/parameters/fsync_enabled 0
-
-    # Disable Gentle Fair Sleepers
-    write /sys/kernel/sched/gentle_fair_sleepers 0
-
+    write /sys/block/sda/queue/nr_requests 256
 
