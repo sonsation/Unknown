@@ -85,7 +85,7 @@ struct cpuset {
 
 	unsigned long flags;		/* "unsigned long" so bitops work */
 	cpumask_var_t cpus_allowed;	/* CPUs allowed to tasks in cpuset */
-        cpumask_var_t cpus_requested;   /* CPUS requested, but not used because of hotplug */
+	cpumask_var_t cpus_requested;   /* CPUS requested, but not used because of hotplug */
 	nodemask_t mems_allowed;	/* Memory Nodes allowed to tasks */
 
 	struct fmeter fmeter;		/* memory_pressure filter */
@@ -889,7 +889,7 @@ static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
 		if (!cpumask_subset(trialcs->cpus_requested, cpu_present_mask))
 			return -EINVAL;
 
-                cpumask_and(trialcs->cpus_allowed, trialcs->cpus_requested, cpu_active_mask); 
+		cpumask_and(trialcs->cpus_allowed, trialcs->cpus_requested, cpu_active_mask);
 	}
 	retval = validate_change(cs, trialcs);
 	if (retval < 0)
@@ -907,7 +907,7 @@ static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
 
 	mutex_lock(&callback_mutex);
 	cpumask_copy(cs->cpus_allowed, trialcs->cpus_allowed);
-        cpumask_copy(cs->cpus_requested, trialcs->cpus_requested); 
+	cpumask_copy(cs->cpus_requested, trialcs->cpus_requested);
 	mutex_unlock(&callback_mutex);
 
 	/*
@@ -1891,6 +1891,7 @@ static struct cgroup_subsys_state *cpuset_css_alloc(struct cgroup *cont)
 		goto error_requested;
 
 	set_bit(CS_SCHED_LOAD_BALANCE, &cs->flags);
+	cpumask_clear(cs->cpus_allowed);
 	cpumask_clear(cs->cpus_requested);
 	nodes_clear(cs->mems_allowed);
 	fmeter_init(&cs->fmeter);
@@ -1954,7 +1955,7 @@ static int cpuset_css_online(struct cgroup *cgrp)
 	mutex_lock(&callback_mutex);
 	cs->mems_allowed = parent->mems_allowed;
 	cpumask_copy(cs->cpus_allowed, parent->cpus_allowed);
-        cpumask_copy(cs->cpus_requested, parent->cpus_requested);
+	cpumask_copy(cs->cpus_requested, parent->cpus_requested);
 	mutex_unlock(&callback_mutex);
 out_unlock:
 	mutex_unlock(&cpuset_mutex);
@@ -1987,7 +1988,7 @@ static void cpuset_css_free(struct cgroup *cont)
 	struct cpuset *cs = cgroup_cs(cont);
 
 	free_cpumask_var(cs->cpus_allowed);
-        free_cpumask_var(cs->cpus_requested);
+	free_cpumask_var(cs->cpus_requested);
 	kfree(cs);
 }
 
@@ -1998,7 +1999,7 @@ struct cgroup_subsys cpuset_subsys = {
 	.css_offline = cpuset_css_offline,
 	.css_free = cpuset_css_free,
 	.can_attach = cpuset_can_attach,
-        .allow_attach = cpuset_allow_attach,  
+	.allow_attach = cpuset_allow_attach,
 	.cancel_attach = cpuset_cancel_attach,
 	.attach = cpuset_attach,
 	.subsys_id = cpuset_subsys_id,
@@ -2018,11 +2019,11 @@ int __init cpuset_init(void)
 
 	if (!alloc_cpumask_var(&top_cpuset.cpus_allowed, GFP_KERNEL))
 		BUG();
-        if (!alloc_cpumask_var(&top_cpuset.cpus_requested, GFP_KERNEL))
+	if (!alloc_cpumask_var(&top_cpuset.cpus_requested, GFP_KERNEL))
 		BUG();
 
 	cpumask_setall(top_cpuset.cpus_allowed);
-        cpumask_setall(top_cpuset.cpus_requested);
+	cpumask_setall(top_cpuset.cpus_requested);
 	nodes_setall(top_cpuset.mems_allowed);
 
 	fmeter_init(&top_cpuset.fmeter);
@@ -2087,6 +2088,7 @@ static void cpuset_propagate_hotplug_workfn(struct work_struct *work)
 
 	cpumask_and(&new_allowed, cs->cpus_requested, top_cpuset.cpus_allowed);
 	cpumask_xor(&diff, &new_allowed, cs->cpus_allowed);
+
 	nodes_andnot(off_mems, cs->mems_allowed, top_cpuset.mems_allowed);
 
 	/* remove offline cpus from @cs */
