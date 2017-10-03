@@ -68,7 +68,7 @@ static int prune_super(struct shrinker *shrink, struct shrink_control *sc)
 	if (sc->nr_to_scan && !(sc->gfp_mask & __GFP_FS))
 		return -1;
 
-	if (!grab_super_passive(sb))
+	if (!trylock_super(sb))
 		return -1;
 
 	if (sb->s_op && sb->s_op->nr_cached_objects)
@@ -107,7 +107,7 @@ static int prune_super(struct shrinker *shrink, struct shrink_control *sc)
 	}
 
 	total_objects = (total_objects / 100) * sysctl_vfs_cache_pressure;
-	drop_super(sb);
+	up_read(&sb->s_umount);
 	return total_objects;
 }
 
@@ -337,35 +337,31 @@ static int grab_super(struct super_block *s) __releases(sb_lock)
 }
 
 /*
- *	grab_super_passive - acquire a passive reference
+ *	trylock_super - acquire a passive reference
  *	@sb: reference we are trying to grab
  *
- *	Tries to acquire a passive reference. This is used in places where we
+ *	Try to prevent fs shutdown. This is used in places where we
  *	cannot take an active reference but we need to ensure that the
- *	superblock does not go away while we are working on it. It returns
- *	false if a reference was not gained, and returns true with the s_umount
- *	lock held in read mode if a reference is gained. On successful return,
- *	the caller must drop the s_umount lock and the passive reference when
- *	done.
+ *	filesystem is not shut down while we are working on it. It returns
+ *	false if we cannot acquire s_umount or if we lose the race and
+ *	filesystem already got into shutdown, and returns true with the s_umount
+ *	lock held in read mode in case of success. On successful return,
+ *	the caller must drop the s_umount lock when done.
+ *
+ *	Note that unlike get_super() et.al. this one does *not* bump ->s_count.
+ *	The reason why it's safe is that we are OK with doing trylock instead
+ *	of down_read().  There's a couple of places that are OK with that, but
+ *	it's very much not a general-purpose interface.
  */
-bool grab_super_passive(struct super_block *sb)
+bool trylock_super(struct super_block *sb)
 {
-	spin_lock(&sb_lock);
-	if (hlist_unhashed(&sb->s_instances)) {
-		spin_unlock(&sb_lock);
-		return false;
-	}
-
-	sb->s_count++;
-	spin_unlock(&sb_lock);
-
 	if (down_read_trylock(&sb->s_umount)) {
-		if (sb->s_root && (sb->s_flags & MS_BORN))
+		if (!hlist_unhashed(&sb->s_instances) &&
+		    sb->s_root && (sb->s_flags & MS_BORN))
 			return true;
 		up_read(&sb->s_umount);
 	}
 
-	put_super(sb);
 	return false;
 }
 
