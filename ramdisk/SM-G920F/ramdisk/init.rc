@@ -280,6 +280,7 @@ on init
     chown system system /dev/cpuset/cpus
     chown system system /dev/cpuset/top-app/cpus
     chown system system /dev/cpuset/foreground/cpus
+    chown system system /dev/cpuset/foreground/boost/cpus    
     chown system system /dev/cpuset/background/cpus
     chown system system /dev/cpuset/system-background/cpus
     chown system system /dev/cpuset/cached/cpus
@@ -302,6 +303,7 @@ on init
     chmod 0664 /dev/cpuset/tasks
     chmod 0664 /dev/cpuset/top-app/cpus
     chmod 0664 /dev/cpuset/foreground/cpus
+    chmod 0664 /dev/cpuset/foreground/boost/cpus	
     chmod 0664 /dev/cpuset/background/cpus
     chmod 0664 /dev/cpuset/system-background/cpus
     chmod 0664 /dev/cpuset/cached/cpus
@@ -609,8 +611,6 @@ on post-fs-data
 # [ SEC_SELINUX_PORTING_COMMON
     mkdir /data/misc/audit 0775 audit system 
 
-    # start auditd
-    start auditd
 # ] SEC_SELINUX_PORTING_COMMON
 
     # ATT CIQ
@@ -1303,72 +1303,6 @@ service SIDESYNC_service /system/bin/ss_conn_daemon
     user system
     group inet net_raw
     
-## WTL_EDM_START
-## EDM AuditLog
-service edmaudit /system/bin/edmaudit
-    class main
-    user root
-    
-## WTL_EDM_END
-
-service kap_enable /sbin/knox_changer -e
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-service kap_disable /sbin/knox_changer -d
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-on property:security.knox_kap_mode=true
-    start kap_enable
-on property:security.knox_kap_mode=false
-    start kap_disable
-
-service afw_enable /sbin/knox_changer -f
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-service afw_disable /sbin/knox_changer -s
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-on property:security.knox_afw_mode=true
-    start afw_enable
-on property:security.knox_afw_mode=false
-    start afw_disable
-
-service ucs_enable /sbin/knox_changer -u
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-service ucs_disable /sbin/knox_changer -v
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-service ucs_reset /sbin/knox_changer -w
-    class main
-    seclabel u:r:kapd:s0
-    disabled
-    oneshot
-
-on property:security.knox_ucs_mode=true
-    start ucs_enable
-on property:security.knox_ucs_mode=false
-    start ucs_disable
-on property:security.knox_ucs_mode=reset
-    start ucs_reset
 on property:ro.debuggable=1
     # Give writes to anyone for the trace folder on debug builds.
     # The folder is used to store method traces.
@@ -1408,13 +1342,6 @@ service mobicore /system/bin/mcDriverDaemon -r /system/app/FFFFFFFF0000000000000
 
 service flash_recovery /system/bin/install-recovery.sh
     class main
-    oneshot
-
-# [ SEC_SELINUX_PORTING_COMMON
-service auditd /system/bin/auditd -k
-    class main
-    seclabel u:r:auditd:s0
-    disabled
     oneshot
 
 on property:selinux.sec.restorecon=1
