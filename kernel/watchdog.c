@@ -33,6 +33,7 @@ int watchdog_enabled = 1;
 int __read_mostly watchdog_thresh = 10;
 static int __read_mostly watchdog_disabled;
 static u64 __read_mostly sample_period;
+static unsigned long __read_mostly hardlockup_thresh;
 
 static DEFINE_PER_CPU(unsigned long, watchdog_touch_ts);
 static DEFINE_PER_CPU(struct task_struct *, softlockup_watchdog);
@@ -133,12 +134,14 @@ static void set_sample_period(void)
 	 * hardlockup detector generates a warning
 	 */
 	sample_period = get_softlockup_thresh() * ((u64)NSEC_PER_SEC / 5);
+	hardlockup_thresh = sample_period * 3 / NSEC_PER_SEC;
 }
 
 /* Commands for resetting the watchdog */
 static void __touch_watchdog(void)
 {
 	__this_cpu_write(watchdog_touch_ts, get_timestamp());
+	__this_cpu_write(hardlockup_touch_ts, get_timestamp());
 }
 
 void touch_softlockup_watchdog(void)
@@ -217,8 +220,14 @@ static int is_hardlockup_other_cpu(unsigned int cpu)
 {
 	unsigned long hrint = per_cpu(hrtimer_interrupts, cpu);
 
-	if (per_cpu(hrtimer_interrupts_saved, cpu) == hrint)
-		return 1;
+	if (per_cpu(hrtimer_interrupts_saved, cpu) == hrint) {
+		unsigned long now = get_timestamp();
+		unsigned long touch_ts = per_cpu(hardlockup_touch_ts, cpu);
+
+		if (time_after(now, touch_ts) &&
+				(now - touch_ts >= hardlockup_thresh))
+			return 1;
+	}
 
 	per_cpu(hrtimer_interrupts_saved, cpu) = hrint;
 	return 0;
