@@ -1,3 +1,4 @@
+#include <linux/cpufreq.h>
 #include <linux/export.h>
 #include <linux/sched.h>
 #include <linux/tsacct_kern.h>
@@ -149,6 +150,11 @@ void account_user_time(struct task_struct *p, cputime_t cputime,
 
 	/* Account for user time used */
 	acct_account_cputime(p);
+
+#ifdef CONFIG_CPU_FREQ_STAT
+	/* Account power usage for user time */
+	acct_update_power(p, cputime);
+#endif
 }
 
 /*
@@ -199,6 +205,11 @@ void __account_system_time(struct task_struct *p, cputime_t cputime,
 
 	/* Account for system time used */
 	acct_account_cputime(p);
+
+#ifdef CONFIG_CPU_FREQ_STAT
+	/* Account power usage for system time */
+	acct_update_power(p, cputime);
+#endif
 }
 
 /*
@@ -289,11 +300,11 @@ void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times)
 
 	rcu_read_lock();
 	/* make sure we can trust tsk->thread_group list */
- 	if (!likely(pid_alive(tsk)))
- 		goto out;
- 
- 	t = tsk;
- 	do {
+	if (!likely(pid_alive(tsk)))
+		goto out;
+
+	t = tsk;
+	do {
 		task_cputime(t, &utime, &stime);
 		times->utime += utime;
 		times->stime += stime;
