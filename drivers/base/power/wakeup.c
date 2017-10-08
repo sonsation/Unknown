@@ -14,6 +14,7 @@
 #include <linux/suspend.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/types.h>
 #ifdef CONFIG_SEC_PM_DEBUG
 #include <linux/fb.h>
 #endif
@@ -48,6 +49,9 @@ module_param(enable_bluedroid_timer_wl, bool, 0644);
  * if wakeup events are registered during or immediately before the transition.
  */
 bool events_check_enabled __read_mostly;
+
+/* If set and the system is suspending, terminate the suspend. */
+static bool pm_abort_suspend __read_mostly;
 
 /*
  * Combined counters of registered wakeup events and wakeup events in progress.
@@ -196,26 +200,6 @@ void wakeup_source_remove(struct wakeup_source *ws)
 EXPORT_SYMBOL_GPL(wakeup_source_remove);
 
 /**
- * wakeup_source_remove_async - Remove given object from the wakeup sources
- * list.
- * @ws: Wakeup source object to remove from the list.
- *
- * Use only for wakeup source objects created with wakeup_source_create().
- * Memory for ws must be freed via rcu.
- */
-static void wakeup_source_remove_async(struct wakeup_source *ws)
-{
-	unsigned long flags;
-
-	if (WARN_ON(!ws))
-		return;
-
-	spin_lock_irqsave(&events_lock, flags);
-	list_del_rcu(&ws->entry);
-	spin_unlock_irqrestore(&events_lock, flags);
-}
-
-/**
  * wakeup_source_register - Create wakeup source and add it to the list.
  * @name: Name of the wakeup source to register.
  */
@@ -238,8 +222,8 @@ EXPORT_SYMBOL_GPL(wakeup_source_register);
 void wakeup_source_unregister(struct wakeup_source *ws)
 {
 	if (ws) {
-		wakeup_source_remove_async(ws);
-		call_rcu(&ws->rcu, wakeup_source_destroy_cb);
+		wakeup_source_remove(ws);
+		wakeup_source_destroy(ws);
 	}
 }
 EXPORT_SYMBOL_GPL(wakeup_source_unregister);
@@ -540,39 +524,6 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 		wake_up(&wakeup_count_wait_queue);
 }
 
-static bool wakeup_source_blocker(struct wakeup_source *ws)
-{
-	unsigned int wslen = 0;
-
-	if (ws) {
-		wslen = strlen(ws->name);
-
-		if ((!enable_sensorhub_wl && !strncmp(ws->name, "ssp_sensorhub_wake_lock", wslen)) ||
-			(!enable_wlan_rx_wake_wl &&
-				!strncmp(ws->name, "wlan_rx_wake", wslen)) ||
-			(!enable_wlan_ctrl_wake_wl &&
-				!strncmp(ws->name, "wlan_ctrl_wake", wslen)) ||
-			(!enable_wlan_wake_wl &&
-				!strncmp(ws->name, "wlan_wake", wslen)) ||
-			(!enable_bluedroid_timer_wl &&
-				!strncmp(ws->name, "bluedroid_timer", wslen)) ||
-			(!enable_ssp_wl &&
-				!strncmp(ws->name, "ssp_wake_lock", wslen)) ||
-			(!enable_bcm4773_wl &&
-				!strncmp(ws->name, "bcm4773_wake_lock", wslen))) {
-			if (ws->active) {
-				wakeup_source_deactivate(ws);
-				pr_info("forcefully deactivate wakeup source: %s\n",
-					ws->name);
-			}
-
-			return true;
-		}
-	}
-
-	return false;
-}
-
 /*
  * The functions below use the observation that each wakeup event starts a
  * period in which the system should not be suspended.  The moment this period
@@ -613,6 +564,31 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
 
+	if (!enable_sensorhub_wl && !strcmp(ws->name, "ssp_sensorhub_wake_lock"))
+		return;
+
+	if (!enable_ssp_wl && !strcmp(ws->name, "ssp_wake_lock"))
+		return;
+
+	if (!enable_bcm4773_wl && !strcmp(ws->name, "bcm4773_wake_lock"))
+		return;
+
+	if (((!enable_wlan_rx_wake_wl && !strcmp(ws->name, "wlan_rx_wake")) ||
+		(!enable_wlan_ctrl_wake_wl &&
+			!strcmp(ws->name, "wlan_ctrl_wake")) ||
+		(!enable_wlan_wake_wl &&
+			!strcmp(ws->name, "wlan_wake")) ||
+		(!enable_bluedroid_timer_wl &&
+			!strcmp(ws->name, "bluedroid_timer")))) {
+		/*
+		 * let's try and deactivate this wakeup source since the user
+		 * clearly doesn't want it. The user is responsible for any
+		 * adverse effects and has been warned about it
+		 */
+		wakeup_source_deactivate(ws);
+		return;
+	}
+
 	/*
 	 * active wakeup source should bring the system
 	 * out of PM_SUSPEND_FREEZE state
@@ -641,15 +617,13 @@ static void wakeup_source_activate(struct wakeup_source *ws)
  */
 static void wakeup_source_report_event(struct wakeup_source *ws)
 {
-	if (!wakeup_source_blocker(ws)) {
-		ws->event_count++;
-		/* This is racy, but the counter is approximate anyway. */
-		if (events_check_enabled)
-			ws->wakeup_count++;
+	ws->event_count++;
+	/* This is racy, but the counter is approximate anyway. */
+	if (events_check_enabled)
+		ws->wakeup_count++;
 
-		if (!ws->active)
-			wakeup_source_activate(ws);
-	}
+	if (!ws->active)
+		wakeup_source_activate(ws);
 }
 
 /**
@@ -831,15 +805,30 @@ EXPORT_SYMBOL_GPL(pm_wakeup_event);
 
 void pm_get_active_wakeup_sources(char *pending_wakeup_source, size_t max)
 {
-	struct wakeup_source *ws;
+	struct wakeup_source *ws, *last_active_ws = NULL;
 	int len = 0;
+	bool active = false;
+
 	rcu_read_lock();
-	len += snprintf(pending_wakeup_source, max, "Pending Wakeup Sources: ");
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
-			len += snprintf(pending_wakeup_source + len, max,
+			if (!active)
+				len += scnprintf(pending_wakeup_source, max,
+						"Pending Wakeup Sources: ");
+			len += scnprintf(pending_wakeup_source + len, max - len,
 				"%s ", ws->name);
+			active = true;
+		} else if (!active &&
+			   (!last_active_ws ||
+			    ktime_to_ns(ws->last_time) >
+			    ktime_to_ns(last_active_ws->last_time))) {
+			last_active_ws = ws;
 		}
+	}
+	if (!active && last_active_ws) {
+		scnprintf(pending_wakeup_source, max,
+				"Last active Wakeup Source: %s",
+				last_active_ws->name);
 	}
 	rcu_read_unlock();
 }
@@ -855,9 +844,7 @@ void pm_print_active_wakeup_sources(void)
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
 			pr_info("active wakeup source: %s\n", ws->name);
-
-			if (!wakeup_source_blocker(ws))
-				active = 1;
+			active = 1;
 		} else if (!active &&
 			   (!last_activity_ws ||
 			    ktime_to_ns(ws->last_time) >
@@ -901,7 +888,18 @@ bool pm_wakeup_pending(void)
 		pm_print_active_wakeup_sources();
 	}
 
-	return ret;
+	return ret || pm_abort_suspend;
+}
+
+void pm_system_wakeup(void)
+{
+	pm_abort_suspend = true;
+	freeze_wake();
+}
+
+void pm_wakeup_clear(void)
+{
+	pm_abort_suspend = false;
 }
 
 /**
