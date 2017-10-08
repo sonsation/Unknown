@@ -204,8 +204,8 @@ static struct attribute_group kernel_attr_group = {
 	.attrs = kernel_attrs,
 };
 
-static unsigned int Lgentle_fair_sleepers = 1;
-static unsigned int Larch_power = 1;
+static unsigned int Lgentle_fair_sleepers = 0;
+static unsigned int Larch_power = 0;
 extern void relay_gfs(unsigned int gfs);
 extern void relay_ap(unsigned int ap);
 
@@ -227,7 +227,7 @@ static ssize_t gentle_fair_sleepers_store(struct kobject *kobj, struct kobj_attr
 	relay_gfs(Lgentle_fair_sleepers);
 	return count;
 }
-KERNEL_ATTR_RW(gentle_fair_sleepers);
+KERNEL_ATTR_READ_ONLY(gentle_fair_sleepers);
 
 static ssize_t arch_power_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -246,7 +246,7 @@ static ssize_t arch_power_store(struct kobject *kobj, struct kobj_attribute *att
 	relay_ap(Larch_power);
 	return count;
 }
-KERNEL_ATTR_RW(arch_power);
+KERNEL_ATTR_READ_ONLY(arch_power);
 
 static struct attribute * sched_features_attrs[] = {
 	&gentle_fair_sleepers_attr.attr,
