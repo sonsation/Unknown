@@ -54,9 +54,23 @@ on init
     # Link /vendor to /system/vendor for devices without a vendor partition.
     symlink /system/vendor /vendor
 
-    # Mount cgroup mount point for cpu accounting
+    # Create cgroup mount point for cpu accounting
+    mkdir /acct
     mount cgroup none /acct cpuacct
     mkdir /acct/uid
+
+    # Create cgroup mount point for memory
+    mount tmpfs none /sys/fs/cgroup mode=0750,uid=0,gid=1000
+    mkdir /sys/fs/cgroup/memory 0750 root system
+    mount cgroup none /sys/fs/cgroup/memory memory
+    write /sys/fs/cgroup/memory/memory.move_charge_at_immigrate 1
+    chown root system /sys/fs/cgroup/memory/tasks
+    chmod 0660 /sys/fs/cgroup/memory/tasks
+    mkdir /sys/fs/cgroup/memory/sw 0750 root system
+    write /sys/fs/cgroup/memory/sw/memory.swappiness 100
+    write /sys/fs/cgroup/memory/sw/memory.move_charge_at_immigrate 1
+    chown root system /sys/fs/cgroup/memory/sw/tasks
+    chmod 0660 /sys/fs/cgroup/memory/sw/tasks
 
     # Create energy-aware scheduler tuning nodes
     mkdir /dev/stune
@@ -135,8 +149,6 @@ on init
     # root memory control cgroup, used by lmkd
     mkdir /dev/memcg 0700 root system
     mount cgroup none /dev/memcg memory
-    # app mem cgroups, used by activity manager, lmkd and zygote
-    mkdir /dev/memcg/apps/ 0755 system system
 
     write /proc/sys/kernel/panic_on_oops 1
     write /proc/sys/kernel/hung_task_timeout_secs 0
@@ -178,45 +190,16 @@ on init
     chown system system /dev/cpuctl/tasks
     chmod 0666 /dev/cpuctl/tasks
     write /dev/cpuctl/cpu.shares 1024
+    write /dev/cpuctl/cpu.rt_runtime_us 800000
     write /dev/cpuctl/cpu.rt_period_us 1000000
-    write /dev/cpuctl/cpu.rt_runtime_us 950000
 
     mkdir /dev/cpuctl/bg_non_interactive
     chown system system /dev/cpuctl/bg_non_interactive/tasks
     chmod 0666 /dev/cpuctl/bg_non_interactive/tasks
     # 5.0 %
     write /dev/cpuctl/bg_non_interactive/cpu.shares 52
+    write /dev/cpuctl/bg_non_interactive/cpu.rt_runtime_us 700000
     write /dev/cpuctl/bg_non_interactive/cpu.rt_period_us 1000000
-    # active FIFO threads will never be in BG
-    write /dev/cpuctl/bg_non_interactive/cpu.rt_runtime_us 10000
-
-    mkdir /dev/cpuctl/bg_cached
-    chown system system /dev/cpuctl/bg_cached/tasks
-    chown system system /dev/cpuctl/bg_cached/cpu.cfs_period_us
-    chown system system /dev/cpuctl/bg_cached/cpu.cfs_quota_us
-    chmod 0666 /dev/cpuctl/bg_cached/tasks
-    chmod 0664 /dev/cpuctl/bg_cached/cpu.cfs_period_us
-    chmod 0664 /dev/cpuctl/bg_cached/cpu.cfs_quota_us
-    # 5.0 %
-    write /dev/cpuctl/bg_cached/cpu.shares 52
-    write /dev/cpuctl/bg_cached/cpu.rt_runtime_us 700000
-    write /dev/cpuctl/bg_cached/cpu.rt_period_us 1000000
-    write /dev/cpuctl/bg_cached/cpu.cfs_period_us 20000
-    write /dev/cpuctl/bg_cached/cpu.cfs_quota_us 10000
-
-    mkdir /dev/cpuctl/bg_abnormal
-    chown system system /dev/cpuctl/bg_abnormal/tasks
-    chown system system /dev/cpuctl/bg_abnormal/cpu.cfs_period_us
-    chown system system /dev/cpuctl/bg_abnormal/cpu.cfs_quota_us
-    chmod 0666 /dev/cpuctl/bg_abnormal/tasks
-    chmod 0664 /dev/cpuctl/bg_abnormal/cpu.cfs_period_us
-    chmod 0664 /dev/cpuctl/bg_abnormal/cpu.cfs_quota_us
-    # 5.0 %
-    write /dev/cpuctl/bg_abnormal/cpu.shares 52
-    write /dev/cpuctl/bg_abnormal/cpu.rt_runtime_us 700000
-    write /dev/cpuctl/bg_abnormal/cpu.rt_period_us 1000000
-    write /dev/cpuctl/bg_abnormal/cpu.cfs_period_us 20000
-    write /dev/cpuctl/bg_abnormal/cpu.cfs_quota_us 10000
 
     # sets up initial cpusets for ActivityManager
     mkdir /dev/cpuset
@@ -224,9 +207,6 @@ on init
 
     # this ensures that the cpusets are present and usable, but the device's
     # init.rc must actually set the correct cpus
-    mkdir /dev/cpuset/top-app
-    write /dev/cpuset/top-app/cpus 0-7
-    write /dev/cpuset/top-app/mems 0
     mkdir /dev/cpuset/foreground
     write /dev/cpuset/foreground/cpus 0-2,4-7
     write /dev/cpuset/foreground/mems 0
@@ -236,15 +216,6 @@ on init
     mkdir /dev/cpuset/background
     write /dev/cpuset/background/cpus 0-1
     write /dev/cpuset/background/mems 0
-    mkdir /dev/cpuset/cached
-    write /dev/cpuset/cached/cpus 1
-    write /dev/cpuset/cached/mems 0
-    mkdir /dev/cpuset/abnormal
-    write /dev/cpuset/abnormal/cpus 1
-    write /dev/cpuset/abnormal/mems 0
-    mkdir /dev/cpuset/dex2oat
-    write /dev/cpuset/dex2oat/cpus 0-2,4-7
-    write /dev/cpuset/dex2oat/mems 0
     mkdir /dev/cpuset/invisible
     write /dev/cpuset/invisible/cpus 0-7
     write /dev/cpuset/invisible/mems 0
@@ -253,62 +224,42 @@ on init
     # little cores, not on bigs
     # to be used only by init, so don't change system-bg permissions
     mkdir /dev/cpuset/system-background
-    write /dev/cpuset/system-background/cpus 0-2
+    write /dev/cpuset/system-background/cpus 0-7
     write /dev/cpuset/system-background/mems 0
 
     # change permissions for all cpusets we'll touch at runtime
     chown system system /dev/cpuset
-    chown system system /dev/cpuset/top-app
     chown system system /dev/cpuset/foreground
     chown system system /dev/cpuset/foreground/boost
     chown system system /dev/cpuset/background
     chown system system /dev/cpuset/system-background
-    chown system system /dev/cpuset/cached
-    chown system system /dev/cpuset/abnormal
-    chown system system /dev/cpuset/dex2oat
     chown system system /dev/cpuset/invisible
     chown system system /dev/cpuset/tasks
-    chown system system /dev/cpuset/top-app/tasks
     chown system system /dev/cpuset/foreground/tasks
     chown system system /dev/cpuset/foreground/boost/tasks
     chown system system /dev/cpuset/background/tasks
     chown system system /dev/cpuset/system-background/tasks
-    chown system system /dev/cpuset/cached/tasks
-    chown system system /dev/cpuset/abnormal/tasks
-    chown system system /dev/cpuset/dex2oat/tasks
-    chown system system /dev/cpuset/invisible/tasks   
+    chown system system /dev/cpuset/invisible/tasks 
     chown system system /dev/cpuset/cpus
-    chown system system /dev/cpuset/top-app/cpus
     chown system system /dev/cpuset/foreground/cpus
     chown system system /dev/cpuset/foreground/boost/cpus    
     chown system system /dev/cpuset/background/cpus
     chown system system /dev/cpuset/system-background/cpus
-    chown system system /dev/cpuset/cached/cpus
-    chown system system /dev/cpuset/abnormal/cpus
-    chown system system /dev/cpuset/dex2oat/cpus
     chown system system /dev/cpuset/invisible/cpus
 
     # set system-background to 0775 so SurfaceFlinger can touch it
     chmod 0775 /dev/cpuset/system-background
+    chmod 0755 /dev/cpuset/invisible
 
-    chmod 0664 /dev/cpuset/top-app/tasks
     chmod 0664 /dev/cpuset/foreground/tasks
     chmod 0664 /dev/cpuset/foreground/boost/tasks
     chmod 0664 /dev/cpuset/background/tasks
     chmod 0664 /dev/cpuset/system-background/tasks
-    chmod 0664 /dev/cpuset/cached/tasks
-    chmod 0664 /dev/cpuset/abnormal/tasks
-    chmod 0664 /dev/cpuset/dex2oat/tasks
-    chmod 0644 /dev/cpuset/invisible/tasks
+    chmod 0664 /dev/cpuset/invisible/tasks
     chmod 0664 /dev/cpuset/tasks
-    chmod 0664 /dev/cpuset/top-app/cpus
     chmod 0664 /dev/cpuset/foreground/cpus
-    chmod 0664 /dev/cpuset/foreground/boost/cpus	
+    chmod 0666 /dev/cpuset/foreground/boost/cpus	
     chmod 0664 /dev/cpuset/background/cpus
-    chmod 0664 /dev/cpuset/system-background/cpus
-    chmod 0664 /dev/cpuset/cached/cpus
-    chmod 0664 /dev/cpuset/abnormal/cpus
-    chmod 0664 /dev/cpuset/dex2oat/cpus
     chmod 0664 /dev/cpuset/invisible/cpus
     chmod 0664 /dev/cpuset/cpus
 
@@ -668,11 +619,6 @@ on post-fs-data
     chown media system /dev/socket/uibc
     chmod 0775 /dev/socket/uibc    
     
-    # VaultKeeper socket
-    mkdir /dev/socket/vaultkeeper 0770 system system
-    chown system system /dev/socket/vaultkeeper
-    chmod 0770 /dev/socket/vaultkeeper
-
 # [ SEC_MM_DRM
     # DRM directory creation
     mkdir /system/etc/security/.drm 0775

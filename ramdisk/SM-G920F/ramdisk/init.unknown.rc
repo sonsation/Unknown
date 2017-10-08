@@ -1,7 +1,5 @@
-on early-init
-    write /sys/block/sda/queue/scheduler noop
-
 on property:sys.boot_completed=1
+
     # Set HMP
     write /dev/cpuset/foreground/cpus 0-7
     write /dev/cpuset/background/cpus 0
@@ -9,37 +7,13 @@ on property:sys.boot_completed=1
     write /dev/cpuset/system-background/cpus 0-3
     write /dev/cpuset/invisible/cpus 0-3     
 
-    # Make sure governor sys paths have the correct permissions
-    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
-    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
-
-    # Make sure all the cpufreq sys paths have the correct permissions
-    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
-    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
-    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
-    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
-    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
-
-    # Make sure GPU control sys paths have the correct permissions
-    chown system system /sys/devices/14ac0000.mali/dvfs_governor
-    chmod 0664 /sys/devices/14ac0000.mali/dvfs_governor
-    chown system system /sys/devices/platform/gpusysfs/gpu_min_clock
-    chmod 0664 /sys/devices/platform/gpusysfs/gpu_min_clock
-    chown system system /sys/devices/platform/gpusysfs/gpu_max_clock
-    chmod 0664 /sys/devices/platform/gpusysfs/gpu_max_clock
-
     # Set Governor
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
     write /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor interactive
 
     # Min freq values
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 400000
-    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 400000
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 600000
 
     # Max freq values
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 1500000
@@ -47,15 +21,27 @@ on property:sys.boot_completed=1
 
     # Stock GPU values
     write /sys/devices/14ac0000.mali/dvfs_governor interactive
-    write /sys/devices/platform/gpusysfs/gpu_min_clock 100
+    write /sys/devices/platform/gpusysfs/gpu_min_clock 266
     write /sys/devices/platform/gpusysfs/gpu_max_clock 700
 
     # Set TCP
     write /proc/sys/net/ipv4/tcp_congestion_control westwood
+   
+    # Disable Wakelocks
+    write /sys/module/wakeup/parameters/enable_sensorhub_wl 0
+    write /sys/module/wakeup/parameters/enable_ssp_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_rx_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_ctrl_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_scan_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_netlink_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_pm_wake_wl 0
+    write /sys/module/wakeup/parameters/enable_wlan_txfl_wake_wl 0	
 
     # I/O management
     write /sys/block/sda/queue/scheduler row	
     write /sys/block/sda/queue/rotational 0
+    write /sys/block/sda/queue/rq_affinity 2
     write /sys/block/sda/queue/read_ahead_kb 128
     write /sys/block/sda/queue/nr_requests 256
 

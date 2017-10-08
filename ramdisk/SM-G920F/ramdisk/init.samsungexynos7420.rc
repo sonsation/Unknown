@@ -356,6 +356,30 @@ on boot
     chown system system /sys/devices/system/cpu/cpu5/online
     chown system system /sys/devices/system/cpu/cpu6/online
     chown system system /sys/devices/system/cpu/cpu7/online
+
+    # Make sure governor sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+
+    # Make sure all the cpufreq sys paths have the correct permissions
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+
+    # Make sure GPU control sys paths have the correct permissions
+    chown system system /sys/devices/14ac0000.mali/dvfs_governor
+    chmod 0664 /sys/devices/14ac0000.mali/dvfs_governor
+    chown system system /sys/devices/platform/gpusysfs/gpu_min_clock
+    chmod 0664 /sys/devices/platform/gpusysfs/gpu_min_clock
+    chown system system /sys/devices/platform/gpusysfs/gpu_max_clock
+    chmod 0664 /sys/devices/platform/gpusysfs/gpu_max_clock
  
     # CPU Idle
     chown system system /sys/module/cpuidle_exynos64/parameters/enable_mask
