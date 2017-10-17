@@ -5,7 +5,6 @@
  *  square root from Guy L. Steele.
  */
 
-#include <asm/lib.h>
 #include <linux/kernel.h>
 #include <linux/export.h>
 
@@ -15,7 +14,6 @@
  *
  * A very rough approximation to the sqrt() function.
  */
-#ifndef __HAVE_ARCH_INT_SQRT
 inline unsigned long int_sqrt(unsigned long x)
 {
 	register unsigned long tmp;
@@ -46,4 +44,3 @@ inline unsigned long int_sqrt(unsigned long x)
 	return root;
 }
 EXPORT_SYMBOL(int_sqrt);
-#endif
