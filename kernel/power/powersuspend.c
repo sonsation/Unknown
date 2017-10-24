@@ -22,8 +22,6 @@
  *
  *  v1.7.1 - replaced deprecated singlethread workqueue with updated schedule_work
  *
- *  v1.8 - add debug sysfs trigger to see how driver work
- *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -41,19 +39,7 @@
 #include <linux/workqueue.h>
 
 #define MAJOR_VERSION	1
-#define MINOR_VERSION	8
-
-/*
- * debug = 1 will print all
- */
-static unsigned int debug = 0;
-module_param_named(debug_mask, debug, uint, 0644);
-
-#define dprintk(msg...)		\
-do { 				\
-	if (debug)		\
-		pr_info(msg);	\
-} while (0)
+#define MINOR_VERSION	7
 
 struct workqueue_struct *suspend_work_queue;
 
@@ -96,7 +82,9 @@ static void power_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
-	dprintk("[POWERSUSPEND] entering suspend...\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] entering suspend...\n");
+	#endif
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_INACTIVE)
@@ -106,13 +94,17 @@ static void power_suspend(struct work_struct *work)
 	if (abort)
 		goto abort_suspend;
 
-	dprintk("[POWERSUSPEND] suspending...\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] suspending...\n");
+	#endif
 	list_for_each_entry(pos, &power_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			pos->suspend(pos);
 		}
 	}
-	dprintk("[POWERSUSPEND] suspend completed.\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] suspend completed.\n");
+	#endif
 abort_suspend:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -123,7 +115,9 @@ static void power_resume(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
-	dprintk("[POWERSUSPEND] entering resume...\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] entering resume...\n");
+	#endif
 	mutex_lock(&power_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == POWER_SUSPEND_ACTIVE)
@@ -133,13 +127,17 @@ static void power_resume(struct work_struct *work)
 	if (abort)
 		goto abort_resume;
 
-	dprintk("[POWERSUSPEND] resuming...\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] resuming...\n");
+	#endif
 	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			pos->resume(pos);
 		}
 	}
-	dprintk("[POWERSUSPEND] resume completed.\n");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] resume completed.\n");
+	#endif
 abort_resume:
 	mutex_unlock(&power_suspend_lock);
 }
@@ -151,23 +149,31 @@ void set_power_suspend_state(int new_state)
 	if (state != new_state) {
 		spin_lock_irqsave(&state_lock, irqflags);
 		if (state == POWER_SUSPEND_INACTIVE && new_state == POWER_SUSPEND_ACTIVE) {
-			dprintk("[POWERSUSPEND] state activated.\n");
+			#ifdef CONFIG_POWERSUSPEND_DEBUG
+			pr_info("[POWERSUSPEND] state activated.\n");
+			#endif
 			state = new_state;
 			schedule_work(&power_suspend_work);
 		} else if (state == POWER_SUSPEND_ACTIVE && new_state == POWER_SUSPEND_INACTIVE) {
-			dprintk("[POWERSUSPEND] state deactivated.\n");
+			#ifdef CONFIG_POWERSUSPEND_DEBUG
+			pr_info("[POWERSUSPEND] state deactivated.\n");
+			#endif
 			state = new_state;
 			schedule_work(&power_resume_work);
 		}
 		spin_unlock_irqrestore(&state_lock, irqflags);
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	} else {
-		dprintk("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
+		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
+	#endif
 	}
 }
 
 void set_power_suspend_state_panel_hook(int new_state)
 {
-	dprintk("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] panel resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#endif
 	// Yank555.lu : Only allow panel hook changes in panel mode
 	if (mode == POWER_SUSPEND_PANEL)
 		set_power_suspend_state(new_state);
@@ -194,7 +200,9 @@ static ssize_t power_suspend_state_store(struct kobject *kobj,
 
 	sscanf(buf, "%d\n", &new_state);
 
-	dprintk("[POWERSUSPEND] userspace resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#ifdef CONFIG_POWERSUSPEND_DEBUG
+	pr_info("[POWERSUSPEND] userspace resquests %s.\n", new_state == POWER_SUSPEND_ACTIVE ? "sleep" : "wakeup");
+	#endif
 	if(new_state == POWER_SUSPEND_ACTIVE || new_state == POWER_SUSPEND_INACTIVE)
 		set_power_suspend_state(new_state);
 
