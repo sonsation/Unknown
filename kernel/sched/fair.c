@@ -8448,7 +8448,7 @@ static int cpufreq_callback(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freq = data;
-	int i, cluster, cpu = freq->cpu;
+	int p_idx, p_idx_found = 0, cluster, cpu = freq->cpu;
 	struct cpufreq_extents *extents;
 
 	if (freq->flags & CPUFREQ_CONST_LOOPS)
@@ -8478,14 +8478,19 @@ static int cpufreq_callback(struct notifier_block *nb,
 	if (((struct cpu_p_state)(cluster ? fast : slow)).freq == freq->new)
 		return NOTIFY_OK;
 	
-	for (i = 0; i < cpu_efficiency_table[cluster].n_p_states; i++)
-		if (cpu_efficiency_table[cluster].p_states[i].freq == freq->new)
-			break;
-	
-	if (cluster)
-		fast = cpu_efficiency_table[cluster].p_states[i];
-	else
-		slow = cpu_efficiency_table[cluster].p_states[i];
+	for (p_idx = 0; p_idx < cpu_efficiency_table[cluster].n_p_states; p_idx++) {
+		if (cpu_efficiency_table[cluster].p_states[p_idx].freq == freq->new) {
+			p_idx_found = 1;
+			break;	
+		}
+	}
+
+	if (p_idx_found) {
+		if (cluster)
+			fast = cpu_efficiency_table[cluster].p_states[p_idx];
+		else
+			slow = cpu_efficiency_table[cluster].p_states[p_idx];
+	}
 
 	return NOTIFY_OK;
 }
