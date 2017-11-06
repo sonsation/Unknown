@@ -66,7 +66,6 @@ struct vnswap_stats {
 		/* total double mapped slot number */
 	atomic_t vnswap_read_pages;	/* total read pages */
 	atomic_t vnswap_write_pages;	/* total write pages */
-        atomic_t vnswap_daily_write;
 	atomic_t vnswap_bio_end_fail_r1_num;
 		/* total bio_end fail pages */
 	atomic_t vnswap_bio_end_fail_r2_num;

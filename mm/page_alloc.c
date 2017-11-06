@@ -795,10 +795,6 @@ void __meminit __free_pages_bootmem(struct page *page, unsigned int order)
 }
 
 #ifdef CONFIG_CMA
-bool is_cma_pageblock(struct page *page)
-{
-	return get_pageblock_migratetype(page) == MIGRATE_CMA;
-}
 /* Free whole pageblock and set it's migration type to MIGRATE_CMA. */
 void __init init_cma_reserved_pageblock(struct page *page)
 {
@@ -960,11 +956,6 @@ static int fallbacks[MIGRATE_TYPES][4] = {
 	[MIGRATE_ISOLATE]     = { MIGRATE_RESERVE }, /* Never used */
 #endif
 };
-
-int *get_migratetype_fallbacks(int mtype)
-{
-	return fallbacks[mtype];
-}
 
 /*
  * Move the free pages in a range to the free lists of the requested type.
@@ -1160,37 +1151,6 @@ retry_reserve:
 	return page;
 }
 
-static struct page *__rmqueue_cma(struct zone *zone, unsigned int order,
-							int migratetype)
-{
-	struct page *page = 0;
-#ifdef CONFIG_CMA
-	if (migratetype == MIGRATE_MOVABLE && !zone->cma_alloc)
-		page = __rmqueue_smallest(zone, order, MIGRATE_CMA);
-	else
-#endif
-retry_reserve :
-		page = __rmqueue_smallest(zone, order, migratetype);
-
-
-	if (unlikely(!page) && migratetype != MIGRATE_RESERVE) {
-		page = __rmqueue_fallback(zone, order, migratetype);
-
-		/*
-		 * Use MIGRATE_RESERVE rather than fail an allocation. goto
-		 * is used because __rmqueue_smallest is an inline function
-		 * and we want just one call site
-		 */
-		if (!page) {
-			migratetype = MIGRATE_RESERVE;
-			goto retry_reserve;
-		}
-	}
-
-	trace_mm_page_alloc_zone_locked(page, order, migratetype);
-	return page;
-}
-
 /*
  * Obtain a specified number of elements from the buddy allocator, all under
  * a single hold of the lock, for efficiency.  Add them to the supplied list.
@@ -1198,17 +1158,13 @@ retry_reserve :
  */
 static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			unsigned long count, struct list_head *list,
-			int migratetype, int cold, int cma)
+			int migratetype, int cold)
 {
 	int mt = migratetype, i;
 
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
-		struct page *page;
-		if (cma)
-			page = __rmqueue_cma(zone, order, migratetype);
-		else
-			page = __rmqueue(zone, order, migratetype);
+		struct page *page = __rmqueue(zone, order, migratetype);
 		if (unlikely(page == NULL))
 			break;
 
@@ -1577,8 +1533,7 @@ again:
 		if (list_empty(list)) {
 			pcp->count += rmqueue_bulk(zone, 0,
 					pcp->batch, list,
-					migratetype, cold,
-					gfp_flags & __GFP_CMA);
+					migratetype, cold);
 			if (unlikely(list_empty(list)))
 				goto failed;
 		}
@@ -1605,10 +1560,7 @@ again:
 			WARN_ON_ONCE(order > 1);
 		}
 		spin_lock_irqsave(&zone->lock, flags);
-		if (gfp_flags & __GFP_CMA)
-			page = __rmqueue_cma(zone, order, migratetype);
-		else
-			page = __rmqueue(zone, order, migratetype);
+		page = __rmqueue(zone, order, migratetype);
 		spin_unlock(&zone->lock);
 		if (!page)
 			goto failed;
@@ -2474,7 +2426,7 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 			alloc_flags |= ALLOC_NO_WATERMARKS;
 	}
 #ifdef CONFIG_CMA
-	if (gfp_mask & __GFP_CMA)
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
 		alloc_flags |= ALLOC_CMA;
 #endif
 	return alloc_flags;
@@ -2511,10 +2463,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 		WARN_ON_ONCE(!(gfp_mask & __GFP_NOWARN));
 		return NULL;
 	}
-
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-	set_tsk_thread_flag(current, TIF_MEMALLOC);
-#endif
 
 	/*
 	 * GFP_THISNODE (meaning __GFP_THISNODE, __GFP_NORETRY and
@@ -2665,6 +2613,9 @@ rebalance:
 					goto nopage;
 			}
 
+#ifdef CONFIG_SEC_OOM_KILLER
+			start_tick = jiffies;
+#endif
 			goto restart;
 		}
 	}
@@ -2695,15 +2646,9 @@ rebalance:
 	}
 
 nopage:
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-	clear_tsk_thread_flag(current, TIF_MEMALLOC);
-#endif
 	warn_alloc_failed(gfp_mask, order, NULL);
 	return page;
 got_pg:
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-	clear_tsk_thread_flag(current, TIF_MEMALLOC);
-#endif
 	if (kmemcheck_enabled)
 		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
 	return page;
@@ -2741,9 +2686,6 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	if (unlikely(!zonelist->_zonerefs->zone))
 		return NULL;
 
-        if (IS_ENABLED(CONFIG_CMA) && (gfp_mask & __GFP_CMA))
-		alloc_flags |= ALLOC_CMA;
-
 	/*
 	 * Will only have any effect when __GFP_KMEMCG is set.  This is
 	 * verified in the (always inline) callee
@@ -2761,6 +2703,10 @@ retry_cpuset:
 	if (!preferred_zone)
 		goto out;
 
+#ifdef CONFIG_CMA
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+		alloc_flags |= ALLOC_CMA;
+#endif
 	/* First allocation attempt */
 	page = get_page_from_freelist(gfp_mask|__GFP_HARDWALL, nodemask, order,
 			zonelist, high_zoneidx, alloc_flags,
@@ -5325,8 +5271,8 @@ unsigned long free_reserved_area(unsigned long start, unsigned long end,
 	}
 
 	if (pages && s)
-		pr_info("Freeing %s memory: %ldK (%lx - %lx)\n",
-			s, pages << (PAGE_SHIFT - 10), start, end);
+		pr_info("Freeing %s memory: %ldK\n",
+			s, pages << (PAGE_SHIFT - 10));
 
 	return pages;
 }
@@ -6101,12 +6047,11 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 {
 	unsigned long outer_start, outer_end;
 	int ret = 0, order;
-        struct zone *zone = page_zone(pfn_to_page(start));
 
 	struct compact_control cc = {
 		.nr_migratepages = 0,
 		.order = -1,
-		.zone = zone,
+		.zone = page_zone(pfn_to_page(start)),
 		.sync = true,
 		.ignore_skip_hint = true,
 	};
@@ -6141,8 +6086,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 				       false);
 	if (ret)
 		return ret;
-
-        zone->cma_alloc = 1;
 
 	ret = __alloc_contig_migrate_range(&cc, start, end);
 	if (ret)
@@ -6203,7 +6146,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 done:
 	undo_isolate_page_range(pfn_max_align_down(start),
 				pfn_max_align_up(end), migratetype);
-        zone->cma_alloc = 0;
 	return ret;
 }
 

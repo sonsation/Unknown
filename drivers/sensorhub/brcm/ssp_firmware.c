@@ -19,7 +19,7 @@
 #if ANDROID_VERSION < 70000			/* M OS*/
 #define SSP_FIRMWARE_REVISION_BCM	16060900
 #else								/* N OS*/
-#define SSP_FIRMWARE_REVISION_BCM	17020600
+#define SSP_FIRMWARE_REVISION_BCM	17010200
 #endif	
 #elif defined (CONFIG_SENSORS_SSP_VLTE)
 #undef SSP_FIRMWARE_REVISION_BCM
@@ -34,3 +34,4 @@ unsigned int get_module_rev(struct ssp_data *data)
 {
 	return SSP_FIRMWARE_REVISION_BCM;
 }
+

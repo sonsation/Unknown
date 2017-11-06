@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ ! -f /su/xbin/busybox ]; then
-	BB=/system/xbin/busybox;
-else
-	BB=/su/xbin/busybox;
-fi;
+BB=busybox;
 
 #####################################################################
 # Mount root as RW to apply tweaks and settings
@@ -77,7 +73,3 @@ echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/.unknown/Kernel-test.log;
 
 
 ####################################################################
-
-$BB mount -t rootfs -o remount,ro rootfs
-$BB mount -o remount,ro /system
-$BB mount -o remount,rw /data

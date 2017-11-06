@@ -300,18 +300,7 @@ __read_mostly int scheduler_running;
  */
 int sysctl_sched_rt_runtime = 950000;
 
-/*
- * Number of sched_yield calls that result in a thread yielding
- * to itself before a sleep is injected in its next sched_yield call
- * Setting this to -1 will disable adding sleep in sched_yield
- */
-const_debug int sysctl_sched_yield_sleep_threshold = 4;
 
-/*
- * Sleep duration in us used when sched_yield_sleep_threshold
- * is exceeded.
- */
-const_debug unsigned int sysctl_sched_yield_sleep_duration = 50;
 
 /*
  * __task_rq_lock - lock the rq @p resides on.
@@ -519,52 +508,6 @@ static inline void init_hrtick(void)
 }
 #endif	/* CONFIG_SCHED_HRTICK */
 
-void wake_q_add(struct wake_q_head *head, struct task_struct *task)
-{
-	struct wake_q_node *node = &task->wake_q;
-
-	/*
-	 * Atomically grab the task, if ->wake_q is !nil already it means
-	 * its already queued (either by us or someone else) and will get the
-	 * wakeup due to that.
-	 *
-	 * This cmpxchg() implies a full barrier, which pairs with the write
-	 * barrier implied by the wakeup in wake_up_list().
-	 */
-	if (cmpxchg(&node->next, NULL, WAKE_Q_TAIL))
-		return;
-
-	get_task_struct(task);
-
-	/*
-	 * The head is context local, there can be no concurrency.
-	 */
-	*head->lastp = node;
-	head->lastp = &node->next;
-}
-
-void wake_up_q(struct wake_q_head *head)
-{
-	struct wake_q_node *node = head->first;
-
-	while (node != WAKE_Q_TAIL) {
-		struct task_struct *task;
-
-		task = container_of(node, struct task_struct, wake_q);
-		BUG_ON(!task);
-		/* task can safely be re-inserted now */
-		node = node->next;
-		task->wake_q.next = NULL;
-
-		/*
-		 * wake_up_process() implies a wmb() to pair with the queueing
-		 * in wake_q_add() so as not to miss wakeups.
-		 */
-		wake_up_process(task);
-		put_task_struct(task);
-	}
-}
-
 /*
  * resched_task - mark a task 'to be rescheduled now'.
  *
@@ -740,7 +683,7 @@ void sched_avg_update(struct rq *rq)
 {
 	s64 period = sched_avg_period();
 
-	while ((s64)(rq_clock(rq) - rq->age_stamp) > period) {
+	while ((s64)(rq->clock - rq->age_stamp) > period) {
 		/*
 		 * Inline assembly required to prevent the compiler
 		 * optimising this loop into a divmod call.
@@ -826,14 +769,14 @@ static void set_load_weight(struct task_struct *p)
 static void enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 {
 	update_rq_clock(rq);
-	sched_info_queued(rq, p);
+	sched_info_queued(p);
 	p->sched_class->enqueue_task(rq, p, flags);
 }
 
 static void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
 {
 	update_rq_clock(rq);
-	sched_info_dequeued(rq, p);
+	sched_info_dequeued(p);
 	p->sched_class->dequeue_task(rq, p, flags);
 }
 
@@ -1402,7 +1345,7 @@ ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 		p->sched_class->task_woken(rq, p);
 
 	if (rq->idle_stamp) {
-		u64 delta = rq_clock(rq) - rq->idle_stamp;
+		u64 delta = rq->clock - rq->idle_stamp;
 		u64 max = 2*sysctl_sched_migration_cost;
 		
 		if ((delta > max) || (rq->avg_idle > max))
@@ -1956,7 +1899,7 @@ prepare_task_switch(struct rq *rq, struct task_struct *prev,
 		    struct task_struct *next)
 {
 	trace_sched_switch(prev, next);
-	sched_info_switch(rq, prev, next);
+	sched_info_switch(prev, next);
 	perf_event_task_sched_out(prev, next);
 	fire_sched_out_preempt_notifiers(prev, next);
 	prepare_lock_switch(rq, next);
@@ -2831,7 +2774,7 @@ static u64 do_task_delta_exec(struct task_struct *p, struct rq *rq)
 
 	if (task_current(rq, p)) {
 		update_rq_clock(rq);
-		ns = rq_clock_task(rq) - p->se.exec_start;
+		ns = rq->clock_task - p->se.exec_start;
 		if ((s64)ns < 0)
 			ns = 0;
 	}
@@ -2863,19 +2806,6 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	struct rq *rq;
 	u64 ns = 0;
 
-#if defined(CONFIG_64BIT) && defined(CONFIG_SMP)
-	/*
-	 * 64-bit doesn't need locks to atomically read a 64bit value.
-	 * So we have a optimization chance when the task's delta_exec is 0.
-	 * Reading ->on_cpu is racy, but this is ok.
-	 *
-	 * If we race with it leaving cpu, we'll take a lock. So we're correct.
-	 * If we race with it entering cpu, unaccounted time is 0. This is
-	 * indistinguishable from the read occurring a few cycles earlier.
-	 */
-	if (!p->on_cpu)
-		return p->se.sum_exec_runtime;
-#endif
 	rq = task_rq_lock(p, &flags);
 	ns = p->se.sum_exec_runtime + do_task_delta_exec(p, rq);
 	task_rq_unlock(rq, p, &flags);
@@ -3163,7 +3093,6 @@ need_resched:
 	if (likely(prev != next)) {
 		rq->nr_switches++;
 		rq->curr = next;
-                prev->yield_count = 0; 
 		++*switch_count;
 
 		context_switch(rq, prev, next); /* unlocks the rq */
@@ -3175,11 +3104,9 @@ need_resched:
 		 */
 		cpu = smp_processor_id();
 		rq = cpu_rq(cpu);
-	} else {
-		prev->yield_count++;
+	} else
 		raw_spin_unlock_irq(&rq->lock);
-        }
-  
+
 	exynos_ss_task(cpu, rq->curr);
 	post_schedule(rq);
 
@@ -4491,8 +4418,6 @@ SYSCALL_DEFINE0(sched_yield)
 	struct rq *rq = this_rq_lock();
 
 	schedstat_inc(rq, yld_count);
-        if (rq->curr->yield_count == sysctl_sched_yield_sleep_threshold)
-		schedstat_inc(rq, yield_sleep_count);
 	current->sched_class->yield_task(rq);
 
 	/*
@@ -4504,11 +4429,7 @@ SYSCALL_DEFINE0(sched_yield)
 	do_raw_spin_unlock(&rq->lock);
 	sched_preempt_enable_no_resched();
 
-	if (rq->curr->yield_count == sysctl_sched_yield_sleep_threshold)
-		usleep_range(sysctl_sched_yield_sleep_duration,
-				sysctl_sched_yield_sleep_duration + 5);
-	else
-		schedule();
+	schedule();
 
 	return 0;
 }
@@ -4684,23 +4605,34 @@ EXPORT_SYMBOL_GPL(yield_to);
  * This task is about to go to sleep on IO. Increment rq->nr_iowait so
  * that process accounting knows that this is a task in IO wait state.
  */
-long __sched io_schedule_timeout(long timeout)
+void __sched io_schedule(void)
 {
-	int old_iowait = current->in_iowait;
-	struct rq *rq;
-	long ret;
-
-        current->in_iowait = 1;
-	blk_schedule_flush_plug(current);
+	struct rq *rq = raw_rq();
 
 	delayacct_blkio_start();
-        rq = raw_rq();
 	atomic_inc(&rq->nr_iowait);
-	ret = schedule_timeout(timeout);
-	current->in_iowait = old_iowait;
+	blk_flush_plug(current);
+	current->in_iowait = 1;
+	schedule();
+	current->in_iowait = 0;
 	atomic_dec(&rq->nr_iowait);
 	delayacct_blkio_end();
+}
+EXPORT_SYMBOL(io_schedule);
 
+long __sched io_schedule_timeout(long timeout)
+{
+	struct rq *rq = raw_rq();
+	long ret;
+
+	delayacct_blkio_start();
+	atomic_inc(&rq->nr_iowait);
+	blk_flush_plug(current);
+	current->in_iowait = 1;
+	ret = schedule_timeout(timeout);
+	current->in_iowait = 0;
+	atomic_dec(&rq->nr_iowait);
+	delayacct_blkio_end();
 	return ret;
 }
 
@@ -5818,23 +5750,18 @@ static void destroy_sched_domains(struct sched_domain *sd, int cpu)
  * two cpus are in the same cache domain, see cpus_share_cache().
  */
 DEFINE_PER_CPU(struct sched_domain *, sd_llc);
-DEFINE_PER_CPU(int, sd_llc_size);
 DEFINE_PER_CPU(int, sd_llc_id);
 
 static void update_top_cache_domain(int cpu)
 {
 	struct sched_domain *sd;
 	int id = cpu;
-        int size = 1;
 
 	sd = highest_flag_domain(cpu, SD_SHARE_PKG_RESOURCES);
-	if (sd) {
+	if (sd)
 		id = cpumask_first(sched_domain_span(sd));
-                size = cpumask_weight(sched_domain_span(sd));
-	}
 
 	rcu_assign_pointer(per_cpu(sd_llc, cpu), sd);
-        per_cpu(sd_llc_size, cpu) = size;
 	per_cpu(sd_llc_id, cpu) = id;
 }
 
@@ -5936,9 +5863,6 @@ struct sched_domain_topology_level {
  * Build an iteration mask that can exclude certain CPUs from the upwards
  * domain traversal.
  *
- * Only CPUs that can arrive at this group should be considered to continue
- * balancing.
- *
  * Asymmetric node setups can result in situations where the domain tree is of
  * unequal depth, make sure to skip domains that already cover the entire
  * range.
@@ -5950,30 +5874,18 @@ struct sched_domain_topology_level {
  */
 static void build_group_mask(struct sched_domain *sd, struct sched_group *sg)
 {
-	const struct cpumask *sg_span = sched_group_cpus(sg);
+	const struct cpumask *span = sched_domain_span(sd);
 	struct sd_data *sdd = sd->private;
 	struct sched_domain *sibling;
 	int i;
 
-	for_each_cpu(i, sg_span) {
+	for_each_cpu(i, span) {
 		sibling = *per_cpu_ptr(sdd->sd, i);
-		/*
-		 * Can happen in the asymmetric case, where these siblings are
-		 * unused. The mask will not be empty because those CPUs that
-		 * do have the top domain _should_ span the domain.
-		 */
-		if (!sibling->child)
-			continue;
-
-		/* If we would not end up here, we can't continue from here */
-		if (!cpumask_equal(sg_span, sched_domain_span(sibling->child)))
+		if (!cpumask_test_cpu(i, sched_domain_span(sibling)))
 			continue;
 
 		cpumask_set_cpu(i, sched_group_mask(sg));
 	}
-
-        /* We must not have empty masks here */
-	WARN_ON_ONCE(cpumask_empty(sched_group_mask(sg))); 
 }
 
 /*
@@ -6736,13 +6648,16 @@ static int build_sched_domains(const struct cpumask *cpu_map,
 		sd = NULL;
 		for (tl = sched_domain_topology; tl->init; tl++) {
 			sd = build_sched_domain(tl, &d, cpu_map, attr, sd, i);
-                        if (tl == sched_domain_topology)
-				*per_cpu_ptr(d.sd, i) = sd;
 			if (tl->flags & SDTL_OVERLAP || sched_feat(FORCE_SD_OVERLAP))
 				sd->flags |= SD_OVERLAP;
 			if (cpumask_equal(cpu_map, sched_domain_span(sd)))
 				break;
 		}
+
+		while (sd->child)
+			sd = sd->child;
+
+		*per_cpu_ptr(d.sd, i) = sd;
 	}
 
 	/* Build the groups for the domains */

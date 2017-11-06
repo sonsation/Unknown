@@ -16,9 +16,6 @@
 #include <linux/sysfs.h>
 #include <linux/balloon_compaction.h>
 #include <linux/page-isolation.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
 #include "internal.h"
 
 #ifdef CONFIG_COMPACTION
@@ -1117,7 +1114,7 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 	count_compact_event(COMPACTSTALL);
 
 #ifdef CONFIG_CMA
-	if (gfp_mask & __GFP_CMA)
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
 		alloc_flags |= ALLOC_CMA;
 #endif
 	/* Compact each zone in the list */
@@ -1137,29 +1134,6 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 
 	return rc;
 }
-
-#ifdef CONFIG_STATE_NOTIFIER
-static void compact_nodes(void);
-
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	switch (event) {
-		case STATE_NOTIFIER_SUSPEND:
-			compact_nodes();
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block compact_notifier_block = {
-	.notifier_call = state_notifier_callback,
-	.priority = -1,
-};
-#endif
 
 
 /* Compact all zones within a node */
@@ -1226,23 +1200,16 @@ static void compact_node(int nid)
 	__compact_pgdat(NODE_DATA(nid), &cc);
 }
 
-void zswap_compact(void);
 /* Compact all nodes in the system */
 static void compact_nodes(void)
 {
 	int nid;
-
-        sysctl_compact_memory++;
 
 	/* Flush pending updates to the LRU lists */
 	lru_add_drain_all();
 
 	for_each_online_node(nid)
 		compact_node(nid);
-
-        pr_info("compact_memory done.(%d times so far)\n",
-		sysctl_compact_memory);
-	zswap_compact(); 
 }
 
 /* The written value is actually unused, all memory is compacted */
@@ -1252,8 +1219,12 @@ int sysctl_compact_memory;
 int sysctl_compaction_handler(struct ctl_table *table, int write,
 			void __user *buffer, size_t *length, loff_t *ppos)
 {
-	if (write)
+	if (write) {
+		sysctl_compact_memory++;
 		compact_nodes();
+		pr_info("compact_memory done.(%d times so far)\n",
+			sysctl_compact_memory);
+	}
 	else
 		proc_dointvec(table, write, buffer, length, ppos);
 
@@ -1296,14 +1267,5 @@ void compaction_unregister_node(struct node *node)
 	return device_remove_file(&node->dev, &dev_attr_compact);
 }
 #endif /* CONFIG_SYSFS && CONFIG_NUMA */
-
-#ifdef CONFIG_STATE_NOTIFIER
-static int  __init mem_compaction_init(void)
-{
-	state_register_client(&compact_notifier_block);
-	return 0;
-}
-late_initcall(mem_compaction_init);
-#endif
 
 #endif /* CONFIG_COMPACTION */

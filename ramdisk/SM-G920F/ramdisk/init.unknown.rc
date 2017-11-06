@@ -11,22 +11,8 @@ on property:sys.boot_completed=1
     # I/O management
     write /sys/block/sda/queue/scheduler row	
     write /sys/block/sda/queue/rotational 0
-    write /sys/block/sda/queue/rq_affinity 2
-    write /sys/block/sda/queue/add_random 0
-    write /sys/block/sda/queue/read_ahead_kb 128
-    write /sys/block/sda/bdi/min_ratio 5
+    write /sys/block/sda/queue/nr_requests 256
     write /sys/module/sync/parameters/fsync_enabled 0
-
-    # Disable Wakelocks
-    write /sys/module/wakeup/parameters/enable_sensorhub_wl 0
-    write /sys/module/wakeup/parameters/enable_ssp_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_rx_wake_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_ctrl_wake_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_scan_wake_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_wake_wl 0
-    write /sys/module/wakeup/parameters/enable_netlink_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_pm_wake_wl 0
-    write /sys/module/wakeup/parameters/enable_wlan_txfl_wake_wl 0	
 
     # Misc
     write /sys/kernel/sched/gentle_fair_sleepers 0

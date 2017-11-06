@@ -64,6 +64,8 @@
 	get_thread_info tsk			// Ensure MDSCR_EL1.SS is clear,
 	ldr	x19, [tsk, #TI_FLAGS]		// since we can unmask debug
 	disable_step_tsk x19, x20		// exceptions when scheduling.
+
+	mov	x29, xzr			// fp pointed to user-space
 	.else
 	add	x21, sp, #S_FRAME_SIZE
 	.endif
@@ -199,7 +201,7 @@ END(vectors)
  * Invalid mode handlers
  */
 	.macro	inv_entry, el, reason, regsize = 64
-	kernel_entry el, \regsize
+	kernel_entry \el, \regsize
 	mov	x0, sp
 	mov	x1, #\reason
 	mrs	x2, esr_el1
@@ -401,6 +403,10 @@ el0_sync_compat:
 	b.eq	el0_fpsimd_acc
 	cmp	x24, #ESR_EL1_EC_FP_EXC32	// FP/ASIMD exception
 	b.eq	el0_fpsimd_exc
+	cmp	x24, #ESR_EL1_EC_SP_ALIGN	// stack alignment exception
+	b.eq	el0_sp_pc
+	cmp	x24, #ESR_EL1_EC_PC_ALIGN	// pc alignment exception
+	b.eq	el0_sp_pc
 	cmp	x24, #ESR_EL1_EC_UNKNOWN	// unknown exception in EL0
 	b.eq	el0_undef
 	cmp	x24, #ESR_EL1_EC_CP15_32	// CP15 MRC/MCR trap

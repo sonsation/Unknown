@@ -298,6 +298,14 @@ void global_dirty_limits(unsigned long *pbackground, unsigned long *pdirty)
 	else
 		background = (dirty_background_ratio * available_memory) / 100;
 
+#if defined(CONFIG_MIN_DIRTY_THRESH_PAGES) && CONFIG_MIN_DIRTY_THRESH_PAGES > 0
+	if (!vm_dirty_bytes && dirty < CONFIG_MIN_DIRTY_THRESH_PAGES) {
+		dirty = CONFIG_MIN_DIRTY_THRESH_PAGES;
+		if (!dirty_background_bytes)
+			background = dirty / 2;
+	}
+#endif
+
 	if (background >= dirty)
 		background = dirty / 2;
 	tsk = current;
@@ -1540,12 +1548,6 @@ void throttle_vm_writeout(gfp_t gfp_mask)
                 if (global_page_state(NR_UNSTABLE_NFS) +
 			global_page_state(NR_WRITEBACK) <= dirty_thresh)
                         	break;
-                /* Try safe version */
- 		else if (unlikely(global_page_state_snapshot(NR_UNSTABLE_NFS) +
- 			global_page_state_snapshot(NR_WRITEBACK) <=
- 				dirty_thresh))
- 				break;
-
                 congestion_wait(BLK_RW_ASYNC, HZ/10);
 
 		/*

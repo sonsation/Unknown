@@ -61,7 +61,7 @@
 #define   TIMA_DASHBOARD_SIZE    0x1000
 
 #define   TIMA_ROBUF_START      0x52408000
-#define   TIMA_ROBUF_SIZE       0x9f8000 /* 10MB - RKP_SEC_LOG_SIZE - RKP_DASHBOARD_SIZE)*/
+#define   TIMA_ROBUF_SIZE       0x7f8000 /* 8MB - RKP_SEC_LOG_SIZE - RKP_DASHBOARD_SIZE)*/
 
 #define RKP_RBUF_VA      (phys_to_virt(TIMA_ROBUF_START))
 #define RO_PAGES  0x7f8 // (TIMA_ROBUF_SIZE/PAGE_SIZE)
@@ -168,3 +168,4 @@ static inline u8 rkp_is_pg_dbl_mapped(u64 pa)
 #endif //__ASSEMBLY__
 
 #endif //_RKP_ENTRY_H
+

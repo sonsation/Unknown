@@ -508,7 +508,6 @@ struct rq {
 
 	/* sys_sched_yield() stats */
 	unsigned int yld_count;
-        unsigned int yield_sleep_count;
 
 	/* schedule() stats */
 	unsigned int sched_count;
@@ -542,16 +541,6 @@ DECLARE_PER_CPU(struct rq, runqueues);
 #define task_rq(p)		cpu_rq(task_cpu(p))
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
-
-static inline u64 rq_clock(struct rq *rq)
-{
-	return rq->clock;
-}
-
-static inline u64 rq_clock_task(struct rq *rq)
-{
-	return rq->clock_task;
-}
 
 #ifdef CONFIG_SMP
 
@@ -595,7 +584,6 @@ static inline struct sched_domain *highest_flag_domain(int cpu, int flag)
 }
 
 DECLARE_PER_CPU(struct sched_domain *, sd_llc);
-DECLARE_PER_CPU(int, sd_llc_size);
 DECLARE_PER_CPU(int, sd_llc_id);
 
 struct sched_group_power {
@@ -1168,8 +1156,6 @@ extern void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags);
 extern const_debug unsigned int sysctl_sched_time_avg;
 extern const_debug unsigned int sysctl_sched_nr_migrate;
 extern const_debug unsigned int sysctl_sched_migration_cost;
-extern const_debug unsigned int sysctl_sched_yield_sleep_duration;
-extern const_debug int sysctl_sched_yield_sleep_threshold;
 
 static inline u64 sched_avg_period(void)
 {

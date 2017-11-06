@@ -266,6 +266,9 @@ extern void show_regs(struct pt_regs *);
  */
 extern void show_stack(struct task_struct *task, unsigned long *sp);
 
+void io_schedule(void);
+long io_schedule_timeout(long timeout);
+
 extern void cpu_init (void);
 extern void trap_init(void);
 extern void update_process_times(int user);
@@ -313,13 +316,6 @@ extern signed long schedule_timeout_killable(signed long timeout);
 extern signed long schedule_timeout_uninterruptible(signed long timeout);
 asmlinkage void schedule(void);
 extern void schedule_preempt_disabled(void);
-
-extern long io_schedule_timeout(long timeout);
-
-static inline void io_schedule(void)
-{
-	io_schedule_timeout(MAX_SCHEDULE_TIMEOUT);
-}
 
 struct nsproxy;
 struct user_namespace;
@@ -781,50 +777,6 @@ enum cpu_idle_type {
 #define SCHED_POWER_SCALE	(1L << SCHED_POWER_SHIFT)
 
 /*
- * Wake-queues are lists of tasks with a pending wakeup, whose
- * callers have already marked the task as woken internally,
- * and can thus carry on. A common use case is being able to
- * do the wakeups once the corresponding user lock as been
- * released.
- *
- * We hold reference to each task in the list across the wakeup,
- * thus guaranteeing that the memory is still valid by the time
- * the actual wakeups are performed in wake_up_q().
- *
- * One per task suffices, because there's never a need for a task to be
- * in two wake queues simultaneously; it is forbidden to abandon a task
- * in a wake queue (a call to wake_up_q() _must_ follow), so if a task is
- * already in a wake queue, the wakeup will happen soon and the second
- * waker can just skip it.
- *
- * The WAKE_Q macro declares and initializes the list head.
- * wake_up_q() does NOT reinitialize the list; it's expected to be
- * called near the end of a function, where the fact that the queue is
- * not used again will be easy to see by inspection.
- *
- * Note that this can cause spurious wakeups. schedule() callers
- * must ensure the call is done inside a loop, confirming that the
- * wakeup condition has in fact occurred.
- */
-struct wake_q_node {
-	struct wake_q_node *next;
-};
-
-struct wake_q_head {
-	struct wake_q_node *first;
-	struct wake_q_node **lastp;
-};
-
-#define WAKE_Q_TAIL ((struct wake_q_node *) 0x01)
-
-#define WAKE_Q(name)					\
-	struct wake_q_head name = { WAKE_Q_TAIL, &name.first }
-
-extern void wake_q_add(struct wake_q_head *head,
-		       struct task_struct *task);
-extern void wake_up_q(struct wake_q_head *head);
-
-/*
  * sched-domains (multiprocessor balancing) declarations:
  */
 #ifdef CONFIG_SMP
@@ -1124,7 +1076,6 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
-        unsigned int yield_count;
 
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
@@ -1334,8 +1285,6 @@ struct task_struct {
 
 	/* Protection of the PI data structures: */
 	raw_spinlock_t pi_lock;
-
-        struct wake_q_node wake_q; 
 
 #ifdef CONFIG_RT_MUTEXES
 	/* PI waiters blocked on a rt_mutex held by this task */
@@ -2227,7 +2176,7 @@ static inline void mmdrop(struct mm_struct * mm)
 }
 
 /* mmput gets rid of the mappings and all user-space */
-extern int mmput(struct mm_struct *);
+extern void mmput(struct mm_struct *);
 /* Grab a reference to a task's mm, if it is not already going away */
 extern struct mm_struct *get_task_mm(struct task_struct *task);
 /*
